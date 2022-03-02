@@ -32,7 +32,7 @@ jobs:
           python -m pip install -U nuitka
       - name: Build
         run: |
-          python -m nuitka --enable-plugin=tk-inter=numpy --follow-imports --standalone main.py
+          python -m nuitka --enable-plugin=tk-inter --enable-plugin=numpy --follow-imports --standalone main.py
       - name: List files
         run: |
           ls -la
