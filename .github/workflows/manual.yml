@@ -21,13 +21,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -U nuitka
       - name: Build
-        run: echo ${{ github.sha }} > Release.txt
+        run: |
+          echo ${{ github.sha }} > Release.txt
+          python -m nuitka main.py
       - name: Test
         run: cat requirements.txt
       - name: Test2
+        run: ls -la
+      - name: Test3
         run: cat Release.txt
       - name: Release
         uses: softprops/action-gh-release@v1
