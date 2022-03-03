@@ -88,7 +88,7 @@ class Subject:
 
         This is based on many factors, including subjects which are not
         really subjects, per say."""
-        return self.name != "Neformalusis ugdymas"
+        return self.name == "Neformalusis ugdymas"
 
     @property
     def generic_name(self) -> str:
