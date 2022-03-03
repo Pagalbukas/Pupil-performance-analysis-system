@@ -1,11 +1,9 @@
-import shutil
 import timeit
 import openpyxl
 import os
 import xlrd
 import traceback
 
-from xlrd.biffh import XLRDError
 from tkinter import Tk
 from tkinter.filedialog import askopenfilenames
 from typing import TYPE_CHECKING, List, Optional, Union
@@ -13,7 +11,7 @@ from typing import TYPE_CHECKING, List, Optional, Union
 from graph import StudentAveragesGraph
 from models import Student, Subject, Summary
 
-DEBUG = False
+DEBUG = True
 
 class ParsingError(Exception):
 
@@ -81,32 +79,13 @@ class SpreadsheetReader:
         file_path: str
 
     def __init__(self, original_path: str) -> None:
-        # Create temp dir for keeping files while parsing them
-        # Allows to do file manipulations
-        temp_path = self._create_temp_dir()
+        self.file_path = original_path
 
-        # Copies a file to a temp directory
-        self.file_path: str = shutil.copy(original_path, temp_path)
-
-        # Try loading the file as an XLS first
-        # Will become less efficient overtime, consider determining the file
-        # By computing the mime of openxmlformats
-        # Should look for b'PK\003\004' as first 4 bytes, it's a zip file header
-        # Shouldn't be an issue with other files as the reading should then raise an
-        # exception and inform the user.
-        # TODO: refactor for increased speed
-        try:
+        if self.has_archive_header:
+            self._f = open(self.file_path, "rb")
+            doc = openpyxl.load_workbook(self._f, data_only=True, read_only=True)
+        else:
             doc = xlrd.open_workbook(self.file_path, ignore_workbook_corruption=True)
-
-        # If loading as XLS failed, try loading as XLSX
-        except XLRDError:
-            # If file is named .xls despite being xlsx, rename it by prepending an x to the filename.
-            # Nasty solution, I know, but I'm not hacking open the openpyxl module, YET.
-            # And it's Mano Dienynas' engineer oversight too!
-            if self.file_path.lower().endswith(".xls"):
-                os.rename(self.file_path, self.file_path + "x")
-                self.file_path = self.file_path + "x"
-            doc = openpyxl.load_workbook(self.file_path, data_only=True)
 
         self._doc = doc
 
@@ -117,21 +96,20 @@ class SpreadsheetReader:
             assert isinstance(doc, openpyxl.Workbook)
             self.sheet = UnifiedSheet(doc.worksheets[0])
 
-    def _create_temp_dir(self) -> str:
-        """Creates an empty temporary directory and returns its path."""
-        temp_path = os.path.join(os.curdir, ".temp")
-        # If temp path already exists, remove it recursively
-        if os.path.exists(temp_path):
-            shutil.rmtree(temp_path)
-        # And recreate it
-        os.mkdir(temp_path)
-        return temp_path
+    @property
+    def has_archive_header(self) -> bool:
+        """Returns True if file contains an archive header.
+        Usually infers that the file is of the new, Open XML variety."""
+        with open(self.file_path, "rb") as f:
+            return f.read(4) == b'PK\x03\x04'
 
     def close(self) -> None:
         """Closes the reader."""
         if self.sheet.xlrd:
             self._doc.release_resources()
         else:
+            if hasattr(self, "_f"):
+                self._f.close()
             self._doc.close()
         del self._doc
 
@@ -280,7 +258,8 @@ for filename in filenames:
         continue
     except Exception as e:
         cu.parse_error(base_name, "pateikta ne suvestinė arba netinkamas failas")
-        traceback.print_tb(e.__traceback__)
+        if DEBUG:
+            traceback.print_tb(e.__traceback__)
         continue
 
     if summary.type == "metinis":
@@ -295,6 +274,10 @@ for filename in filenames:
     if DEBUG:
         print(f"'{base_name}' skaitymas užtruko {timeit.default_timer() - start_time}s")
 
+if len(summaries) == 0:
+    cu.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
+    exit()
+
 # Sort summaries by
 # 1) term start (year)
 # 2) type (semester) (I -> II -> III)
@@ -304,6 +287,7 @@ summaries.sort(key=lambda s: (s.term_start, s.type_as_int))
 student_cache = [s.name for s in summaries[-1].students]
 
 # Go over each summary and use it to create graph points
+_temp_subject_name_dict = {}
 graph = StudentAveragesGraph([s.representable_name for s in summaries])
 for i, summary in enumerate(summaries):
     cu.info(f"Nagrinėjamas {summary.period_name} ({summary.term_start}-{summary.term_end})")
@@ -325,9 +309,21 @@ for i, summary in enumerate(summaries):
                     cu.warn(f"Dalykas '{subject.name}' automatiškai pervadintas į '{subject.generic_name}'")
                 _cached_subs.append(subject.name)
 
+            if _temp_subject_name_dict.get(subject.name, None) is None:
+                _temp_subject_name_dict[subject.name] = (subject.generic_name, summary.grade_name_as_int)
+
         graph.get_or_create_student(student.name)[i] = student.average
 
-graph.graph(summary.grade_name + " mokinių vidurkių pokytis", anonymize_names=False, use_styled_colouring=True)
+if DEBUG:
+    for key in _temp_subject_name_dict.keys():
+        name, grade = _temp_subject_name_dict[key]
+        print(key, "->", name, f"({grade} kl.)")
+
+graph.graph(
+    summary.grade_name + " mokinių vidurkių pokytis",
+    anonymize_names=True,
+    use_styled_colouring=True, use_experimental_legend=True
+)
 
 """
 # This is for later when I find out the spec
