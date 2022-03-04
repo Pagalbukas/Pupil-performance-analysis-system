@@ -333,7 +333,7 @@ if DEBUG:
 
 graph.graph(
     summary.grade_name + " mokinių vidurkių pokytis",
-    anonymize_names=True,
+    anonymize_names=False,
     use_styled_colouring=True, use_experimental_legend=True
 )
 
