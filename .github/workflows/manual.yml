@@ -1,6 +1,6 @@
 # This is a basic workflow that is manually triggered
 
-name: Compile and release new version
+name: Compile
 
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
@@ -30,14 +30,11 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           python -m pip install -U nuitka
-      - name: Build
+      - name: Build and compile the program
         run: |
-          python -m nuitka --enable-plugin=tk-inter --enable-plugin=numpy --follow-imports --standalone main.py
-      - name: List files
-        run: |
-          dir main.dist
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
+          python -m nuitka --assume-yes-for-downloads --enable-plugin=tk-inter --enable-plugin=numpy --follow-imports --standalone main.py
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
         with:
-          files: requirements.txt
+            name: Stebesenos sistema
+            path: main.dist/
