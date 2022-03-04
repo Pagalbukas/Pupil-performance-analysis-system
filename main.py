@@ -35,6 +35,9 @@ class ConsoleUtils:
     def print(self, *values):
         print(*values)
 
+    def default(self, *text: str):
+        self.print('\n'.join(text))
+
     def warn(self, *text: str):
         self.print(self.WARNING + '\n'.join(text) + self.END)
 
@@ -259,6 +262,7 @@ for filename in filenames:
     except Exception as e:
         cu.parse_error(base_name, "pateikta ne suvestinė arba netinkamas failas")
         if DEBUG:
+            print(e)
             traceback.print_tb(e.__traceback__)
         continue
 
@@ -271,6 +275,7 @@ for filename in filenames:
         continue
 
     summaries.append(summary)
+    cu.default(f"'{base_name}' perskaitytas")
     if DEBUG:
         print(f"'{base_name}' skaitymas užtruko {timeit.default_timer() - start_time}s")
 
