@@ -1,3 +1,5 @@
+import math
+
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 class SubjectNames:
@@ -61,10 +63,10 @@ class Subject:
 
     if TYPE_CHECKING:
         name: str
-        mark: Optional[int]
+        mark: Optional[Union[int, float, str]]
         is_module: bool
 
-    def __init__(self, name: str, mark: Optional[Union[int, str]]) -> None:
+    def __init__(self, name: str, mark: Optional[Union[int, float, str]]) -> None:
         self.name = name
         self.mark = mark
         self.is_module = "modulis" in self.name
@@ -144,6 +146,31 @@ class Subject:
             return SubjectNames.TECHNOLOGIES
 
         return genericized_name
+
+    @property
+    def clean_mark(self):
+        if self.mark is None:
+            return None        
+
+        if isinstance(self.mark, int):
+            return self.mark
+
+        if isinstance(self.mark, float):
+            return math.trunc(self.mark)
+
+        if self.mark == "įsk":
+            return True
+        if self.mark == "nsk":
+            return False
+        if self.mark == "atl":
+            return None
+
+        if isinstance(self.mark, str):
+            new_mark = self.mark.replace("IN", "")
+            new_mark = new_mark.replace("PR", "")
+            if new_mark.isdecimal():
+                return int(new_mark)
+        raise ValueError(f"Could not convert '{self.mark}' to a clean mark")
 
 class Student:
 
