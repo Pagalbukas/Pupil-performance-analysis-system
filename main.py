@@ -135,6 +135,8 @@ class DataParser:
         self._average_col = None
         self._last_student_row = None
 
+        self._subject_name_cache = {}
+
     def close(self) -> None:
         """Closes the reader. No operations should be performed afterwards."""
         self._reader.close()
@@ -185,30 +187,32 @@ class DataParser:
         """Returns the name of the grade."""
         return self.cell(9, 1)[7:]
 
-    def get_student_data(self) -> List[Student]:
+    def get_student_data(self, fetch_subjects: bool = True) -> List[Student]:
         """Returns a list of student objects."""
         students = []
-            student = Student(
         for row in range(14, self.last_student_row + 1):
             offset = row - 14
+            students.append(Student(
                 self.cell(2, row),
-                self.get_student_subjects(row - 14),
-                self.get_student_average(row - 14)
-            )
-            students.append(student)
+                self.get_student_subjects(offset) if fetch_subjects else [],
+                self.get_student_average(offset)
+            ))
         return students
 
-    def get_student_subjects(self, student_idx: int, ignore_modules: int = False) -> List[Subject]:
+    def get_student_subjects(self, student_idx: int) -> List[Subject]:
         """Returns a list of student's subject objects."""
+        offset = student_idx + 14
         subjects = []
-            subject = Subject(
-                self.cell(col, 4),
-                self.cell(col, student_idx + 14)
-            )
-            if subject.is_module and ignore_modules:
-                continue
-            subjects.append(subject)
         for col in range(3, self.average_mark_column):
+            # Cache subject names as reading a cell with openpyxl is expensive op
+            name = self._subject_name_cache.get(col)
+            if name is None:
+                name = self.cell(col, 4)
+                self._subject_name_cache[col] = name
+            subjects.append(Subject(
+                name,
+                self.cell(col, offset)
+            ))
         return subjects
 
     def get_student_average(self, student_idx: int) -> Optional[float]:
@@ -218,7 +222,7 @@ class DataParser:
             return None
         return value
 
-    def create_summary(self) -> Summary:
+    def create_summary(self, fetch_subjects: bool = True) -> Summary:
         """Attempts to create a Summary object.
 
         May raise an exception."""
@@ -240,7 +244,7 @@ class DataParser:
             parser.get_grade_name(),
             self.type,
             (self.term_start, self.term_end),
-            parser.get_student_data()
+            parser.get_student_data(fetch_subjects)
         )
 
 
@@ -257,7 +261,7 @@ for filename in filenames:
 
     try:
         parser = DataParser(filename)
-        summary = parser.create_summary()
+        summary = parser.create_summary(fetch_subjects=True)
         parser.close()
     except ParsingError as e:
         cu.parse_error(base_name, str(e))
