@@ -304,7 +304,7 @@ for i, summary in enumerate(summaries):
             cu.warn(f"Mokinys '{student.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
             continue
 
-        subjects = student.get_non_none_subjects(True)
+        subjects = student.get_graphing_subjects()
 
         # Notify user regarding different generic and original subject names
         # Not in use as of now, but future proofing

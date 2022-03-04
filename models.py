@@ -88,7 +88,32 @@ class Subject:
 
         This is based on many factors, including subjects which are not
         really subjects, per say."""
-        return self.name == "Neformalusis ugdymas"
+        return (
+            # Informal education
+            self.name == "Neformalusis ugdymas"
+            or self.name == "Neformalus ugdymas"
+
+            # Moral related
+            or self.name.startswith("Dorinis ugdymas")
+
+            # Modules
+            or self.is_module
+
+            # Catch clauses for home schooling
+            # As observed, the data is transferred to the original subject
+            # marking too
+            or self.name.startswith("Namų ugdymas")
+            or self.name.startswith("Namų mokymas")
+
+            # No idea
+            or self.name == "Integruotas technologijų kursas"
+            or self.name == "Lietuvių kalbos rašyba, skyryba ir vartojimas (konsultacijos)"
+            or self.name == "Žmogaus sauga"
+            or self.name == "Karjeros ugdymas"
+
+            # Social work for which you get hours
+            or self.name == "Socialinė-pilietinė veikla"
+        )
 
     @property
     def generic_name(self) -> str:
@@ -141,12 +166,11 @@ class Student:
         Should begin with a name instead of surname."""
         return ' '.join(self.name.split(" ")[::-1])
 
-    def get_non_none_subjects(self, ignore_modules: bool = False) -> List[Subject]:
-        """Returns a list of subjects whose marks are not None."""
+    def get_graphing_subjects(self) -> List[Subject]:
+        """Returns a list of subjects which can be used in graphing (has mark values)."""
         return [
             s for s in self.subjects
             if s.mark is not None # If subject's average was not None
-            and not (ignore_modules and s.is_module) # If subject was not module and it modules are ignored
             and not s.is_ignored # If subject is not ignored
         ]
 
