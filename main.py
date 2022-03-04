@@ -169,6 +169,14 @@ class DataParser:
             self._last_student_row = off_row
         return self._last_student_row
 
+    @property
+    def average_mark_column(self) -> int:
+        return self.find_average_column()
+
+    @property
+    def last_student_row(self) -> int:
+        return self.find_last_student_row()
+
     def get_school_name(self) -> str:
         """Returns the name of the school."""
         return self.cell(1, 1)[9:]
@@ -180,9 +188,9 @@ class DataParser:
     def get_student_data(self) -> List[Student]:
         """Returns a list of student objects."""
         students = []
-        l_row = self.find_last_student_row()
-        for row in range(14, l_row + 1):
             student = Student(
+        for row in range(14, self.last_student_row + 1):
+            offset = row - 14
                 self.cell(2, row),
                 self.get_student_subjects(row - 14),
                 self.get_student_average(row - 14)
@@ -193,8 +201,6 @@ class DataParser:
     def get_student_subjects(self, student_idx: int, ignore_modules: int = False) -> List[Subject]:
         """Returns a list of student's subject objects."""
         subjects = []
-        a_col = self.find_average_column()
-        for col in range(3, a_col):
             subject = Subject(
                 self.cell(col, 4),
                 self.cell(col, student_idx + 14)
@@ -202,12 +208,12 @@ class DataParser:
             if subject.is_module and ignore_modules:
                 continue
             subjects.append(subject)
+        for col in range(3, self.average_mark_column):
         return subjects
 
     def get_student_average(self, student_idx: int) -> Optional[float]:
         """Returns student's average mark."""
-        col = self.find_average_column()
-        value = self.cell(col, student_idx + 14)
+        value = self.cell(self.average_mark_column, student_idx + 14)
         if value == 0:
             return None
         return value
@@ -222,11 +228,8 @@ class DataParser:
         if self.cell(1, 2) != "Ataskaita: Mokinių pasiekimų ir lankomumo suvestinė":
             raise ParsingError("Pateiktas ataskaitos tipas yra netinkamas")
 
-        column = self.find_average_column()
-        row = self.find_last_student_row()
-
         # Check whether group average is a zero, if it is, throw parsing error due to incomplete file
-        if self.cell(column, row + 1) == 0:
+        if self.cell(self.average_mark_column, self.last_student_row + 1) == 0:
             raise ParsingError((
                 "Trūksta duomenų, suvestinė yra nepilna."
                 " Įsitikinkite ar pusmetis/trimestras yra tikrai ir pilnai išvestas!"
