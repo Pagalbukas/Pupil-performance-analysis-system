@@ -206,7 +206,8 @@ class App(QWidget):
         files, _ = QFileDialog.getOpenFileNames(
             self,
             "Pasirinkite Excel suvestinių failus",
-            filter="Excel suvestinių failai (*.xlsx *.xls)"
+            os.path.join(os.environ["userprofile"], "Downloads"),
+            "Excel suvestinių failai (*.xlsx *.xls)"
         )
         return files
 
