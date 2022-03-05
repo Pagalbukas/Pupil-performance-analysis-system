@@ -12,6 +12,9 @@ from typing import List, Optional
 LINE_STYLES = ['-', '--', '-.', ':']
 STYLE_COUNT = len(LINE_STYLES)
 
+# I generated this using numpy and removed the call for compiling performance
+MARK_BOUNDS = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5]
+
 class BaseGraph:
     # TODO: subclass from
     pass
@@ -88,8 +91,7 @@ class StudentAveragesGraph:
 
         # Draw average rounding bounds
         if show_bounds:
-            for i in np.arange(1.5, 10, 0.5):
-                i: float
+            for i in MARK_BOUNDS:
                 if not i.is_integer():
                     ax.plot(period_names, [i] * period_cnt, '--r')
 
