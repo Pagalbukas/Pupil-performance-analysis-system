@@ -32,7 +32,7 @@ jobs:
           python -m pip install -U nuitka
       - name: Build and compile the program
         run: |
-          python -m nuitka --enable-plugin=tk-inter --assume-yes-for-downloads --plugin-enable=qt-plugins --include-qt-plugins=all --include-qt-plugins=sensible,styles --enable-plugin=numpy --follow-imports --standalone main.py
+          python -m nuitka --assume-yes-for-downloads --plugin-enable=qt-plugins --include-qt-plugins=all --include-qt-plugins=sensible,styles --enable-plugin=numpy --follow-imports --standalone main.py
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:

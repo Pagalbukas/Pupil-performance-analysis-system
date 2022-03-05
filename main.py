@@ -1,13 +1,13 @@
+import sys
 import timeit
-import openpyxl
 import os
-import xlrd
 import traceback
 
-from tkinter import Tk
-from tkinter.filedialog import askopenfilenames
-from typing import TYPE_CHECKING, List, Optional, Union
+from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog
 
+from typing import List, Optional, Union
+
+from reader import SpreadsheetReader
 from graph import StudentAveragesGraph
 from models import Student, Subject, Summary
 
@@ -52,69 +52,6 @@ class ConsoleUtils:
 
 
 cu = ConsoleUtils()
-
-xlrdSheet = xlrd.sheet.Sheet
-openpyxlSheet = openpyxl.worksheet._read_only.ReadOnlyWorksheet
-
-class UnifiedSheet:
-    """A class which implements a unified Sheet object."""
-
-    def __init__(self, sheet: Union[xlrdSheet, openpyxlSheet]) -> None:
-        self._sheet = sheet
-
-    @property
-    def xlrd(self) -> bool:
-        """Returns true if input sheet instance was of xlrd."""
-        return isinstance(self._sheet, xlrdSheet)
-
-    def get_cell(self, column: int, row: int) -> Union[None, str, int, float]:
-        """Returns cell value at specified column and row.
-
-        The arguments are flipped than the default implementations."""
-        if self.xlrd:
-            return self._sheet.cell_value(row - 1, column - 1) or None
-        return self._sheet.cell(row, column).value
-
-class SpreadsheetReader:
-    """A class which implements a unified Excel spreadsheet reader."""
-
-    if TYPE_CHECKING:
-        file_path: str
-
-    def __init__(self, original_path: str) -> None:
-        self.file_path = original_path
-
-        if self.has_archive_header:
-            self._f = open(self.file_path, "rb")
-            doc = openpyxl.load_workbook(self._f, data_only=True, read_only=True)
-        else:
-            doc = xlrd.open_workbook(self.file_path, ignore_workbook_corruption=True)
-
-        self._doc = doc
-
-        # Initialize a unified sheet object to keep my nerves in check
-        if isinstance(doc, xlrd.book.Book):
-            self.sheet = UnifiedSheet(doc.sheet_by_index(0))
-        else:
-            assert isinstance(doc, openpyxl.Workbook)
-            self.sheet = UnifiedSheet(doc.worksheets[0])
-
-    @property
-    def has_archive_header(self) -> bool:
-        """Returns True if file contains an archive header.
-        Usually infers that the file is of the new, Open XML variety."""
-        with open(self.file_path, "rb") as f:
-            return f.read(4) == b'PK\x03\x04'
-
-    def close(self) -> None:
-        """Closes the reader."""
-        if self.sheet.xlrd:
-            self._doc.release_resources()
-        else:
-            if hasattr(self, "_f"):
-                self._f.close()
-            self._doc.close()
-        del self._doc
 
 class DataParser:
 
@@ -250,8 +187,33 @@ class DataParser:
 
 cu.info("Pasirinkite pusmečių/trimestrų suvestinių Excel failus")
 
-Tk().withdraw() # prevent full GUI from appearing
-filenames = askopenfilenames(filetypes=[("Excel suvestinių failai", ".xlsx .xls")])
+class App(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        self.title = 'Mokinių pasiekimų analizatorius'
+        self.left = 10
+        self.top = 10
+        self.width = 640
+        self.height = 480
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+    def open_ask_files_dialog(self) -> List[str]:
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Pasirinkite Excel suvestinių failus",
+            filter="Excel suvestinių failai (*.xlsx *.xls)"
+        )
+        return files
+
+
+app = QApplication(sys.argv)
+ex = App()
+filenames = ex.open_ask_files_dialog()
 
 # Do initial creation of summaries by iterating the submitted files and validating them
 summaries: List[Summary] = []
