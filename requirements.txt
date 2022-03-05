@@ -1,3 +1,4 @@
 matplotlib==3.3.3
+pyqt5==5.15.2
 openpyxl==3.0.5
 xlrd==2.0.1

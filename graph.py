@@ -69,6 +69,8 @@ class StudentAveragesGraph:
     ) -> None:
         """Instructs matplotlib to draw a graph."""
 
+        print("Using backend", matplotlib.get_backend())
+
         # Create a plot and a figure
         fig, ax = plt.subplots()
 
