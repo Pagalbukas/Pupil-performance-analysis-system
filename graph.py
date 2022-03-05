@@ -1,5 +1,5 @@
 import matplotlib
-#matplotlib.use('Qt5Agg')
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import matplotlib.cm as mplcm
 import matplotlib.colors as colors
@@ -69,8 +69,6 @@ class StudentAveragesGraph:
         use_experimental_legend: bool = False
     ) -> None:
         """Instructs matplotlib to draw a graph."""
-
-        print("Using backend", matplotlib.get_backend())
 
         # Create a plot and a figure
         fig, ax = plt.subplots()
