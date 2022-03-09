@@ -1,14 +1,21 @@
 import matplotlib
-matplotlib.use('Qt5Agg')
-import matplotlib.pyplot as plt
-import matplotlib.cm as mplcm
-import matplotlib.colors as colors
 
-from matplotlib.backend_bases import PickEvent
-from matplotlib.legend_handler import HandlerLine2D
-from matplotlib.lines import Line2D
-from random import choice, shuffle
-from typing import List, Optional
+# Tell matplotlib to use Qt5Agg explicitly
+matplotlib.use('Qt5Agg')
+
+import matplotlib.cm as mplcm # noqa: E402
+import matplotlib.colors as colors # noqa: E402
+
+# For tweaking the default UI
+from matplotlib.backend_bases import PickEvent # noqa: E402
+from matplotlib.legend_handler import HandlerLine2D # noqa: E402
+from matplotlib.lines import Line2D # noqa: E402
+
+# Load the last for certain features
+import matplotlib.pyplot as plt # noqa: E402
+
+from random import choice, shuffle # noqa: E402
+from typing import List, Optional # noqa: E402
 
 LINE_STYLES = ['-', '--', '-.', ':']
 STYLE_COUNT = len(LINE_STYLES)
