@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QApplication
 from typing import List
 
 from app import App
-from graph import StudentAveragesGraph
+from graphs.graph import StudentAveragesGraph
 from models import Summary
 from parser2 import Parser, ParsingError
 from utils import ConsoleUtils as CU
