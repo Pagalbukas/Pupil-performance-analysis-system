@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QApplication
 from typing import List
 
 from app import App
-from graphs.graph import StudentAveragesGraph
+from graphs.base import StudentAveragesGraph
 from models import Summary
 from parser2 import Parser, ParsingError
 from utils import ConsoleUtils as CU
@@ -70,7 +70,7 @@ student_cache = [s.name for s in summaries[-1].students]
 
 # Go over each summary and use it to create graph points
 _temp_subject_name_dict = {}
-graph = StudentAveragesGraph([s.representable_name for s in summaries])
+graph = StudentAveragesGraph(summary.grade_name + " mokinių vidurkių pokytis", [s.representable_name for s in summaries], anonymize_names=False)
 for i, summary in enumerate(summaries):
     CU.info(f"Nagrinėjamas {summary.period_name} ({summary.term_start}-{summary.term_end})")
     _cached_subs = []
@@ -101,8 +101,7 @@ if DEBUG:
         name, grade = _temp_subject_name_dict[key]
         print(key, "->", name, f"({grade} kl.)")
 
-graph.graph(
-    summary.grade_name + " mokinių vidurkių pokytis",
-    anonymize_names=False,
-    use_styled_colouring=True, use_experimental_legend=True
+graph.display(
+    use_styled_colouring=True,
+    use_experimental_legend=True
 )
