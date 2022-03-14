@@ -72,7 +72,7 @@ class Subject:
         self.is_module = "modulis" in self.name
 
     def __repr__(self) -> str:
-        return f'<Subject name="{self.name}" is_number={self.is_number} mark={self.mark}>'
+        return f'<Subject name="{self.name}" is_number={self.is_number} mark={self.clean_mark}>'
 
     @property
     def type(self) -> str:
@@ -148,16 +148,15 @@ class Subject:
         return genericized_name
 
     @property
-    def clean_mark(self):
+    def clean_mark(self) -> Optional[Union[bool, int, float]]:
         if self.mark is None:
-            return None        
+            return None
 
-        if isinstance(self.mark, int):
+        if isinstance(self.mark, (int, float)):
             return self.mark
 
-        if isinstance(self.mark, float):
-            return math.trunc(self.mark)
-
+        if self.mark == "-":
+            return None
         if self.mark == "įsk":
             return True
         if self.mark == "nsk":
@@ -170,6 +169,8 @@ class Subject:
             new_mark = new_mark.replace("PR", "")
             if new_mark.isdecimal():
                 return int(new_mark)
+            elif new_mark.replace('.', '', 1).isdigit():
+                return float(new_mark)
         raise ValueError(f"Could not convert '{self.mark}' to a clean mark")
 
 class Student:
@@ -197,8 +198,7 @@ class Student:
         """Returns a list of subjects which can be used in graphing (has mark values)."""
         return [
             s for s in self.subjects
-            if s.mark is not None # If subject's average was not None
-            and not s.is_ignored # If subject is not ignored
+            if not s.is_ignored # If subject is not ignored
         ]
 
 class Summary:
