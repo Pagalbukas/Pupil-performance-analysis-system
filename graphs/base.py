@@ -23,6 +23,9 @@ class GraphValue:
         self.label = label
         self.values = values
 
+    def __repr__(self) -> str:
+        return f'<GraphValue label=\'{self.label}\' values={self.values}>'
+
 class BaseGraph:
 
     LINE_STYLES = ['-', '--', '-.', ':']
