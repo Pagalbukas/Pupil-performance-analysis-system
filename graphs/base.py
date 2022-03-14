@@ -161,11 +161,12 @@ class BaseGraph:
 
 class StudentAveragesGraph(BaseGraph):
 
-    def __init__(self, title: str, period_names: List[str], anonymize_names: bool = False) -> None:
+    def __init__(self, title: str, period_names: List[str], anonymize_names: bool = False, perform_rounding: bool = False) -> None:
         super().__init__(title)
         self.period_names = period_names
         self.students = {}
         self.anonymize_names = anonymize_names
+        self.perform_rounding = perform_rounding
 
     def get_or_create_student(self, student_name: str) -> Optional[float]:
         """Creates or gets a student entry in the dictionary and returns the reference."""
@@ -202,7 +203,12 @@ class StudentAveragesGraph(BaseGraph):
         self.students = new_dict
 
     def get_graph_values(self) -> List[GraphValue]:
-        return [GraphValue(n, self.students[n]) for n in self.students.keys()]
+        if not self.perform_rounding:
+            return [GraphValue(n, self.students[n]) for n in self.students.keys()]
+        return [
+            GraphValue(n, [round(v, 1) for v in self.students[n]])
+            for n in self.students.keys()
+        ]
 
     def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
         # Anonymize names when displaying for unauthorized people, in order to prevent disclosing of any additional data
