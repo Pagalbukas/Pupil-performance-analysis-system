@@ -205,12 +205,10 @@ class Summary:
 
     def __init__(
         self,
-        school_name: str,
         grade_name: str,
         sum_type: str, sum_period: Tuple[int, int],
         students: List[Student]
     ) -> None:
-        self.school_name = school_name
         self.grade_name = grade_name
         # For grades which are not gymnasium ones
         if grade_name.isdigit():

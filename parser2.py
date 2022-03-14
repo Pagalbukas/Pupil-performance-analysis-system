@@ -8,12 +8,54 @@ class ParsingError(Exception):
     def __init__(self, message: str) -> None:
         super().__init__(message)
 
-class Parser:
+class BaseParser:
+
+    if TYPE_CHECKING:
+        _average_col: int
+        _last_student_row: int
 
     def __init__(self, file_path: str) -> None:
         self._reader = SpreadsheetReader(file_path)
         self._sheet = self._reader.sheet
 
+        self._average_col = None
+        self._last_student_row = None
+
+    @property
+    def average_mark_column(self) -> int:
+        return self._find_average_column()
+
+    @property
+    def last_student_row(self) -> int:
+        return self._find_last_student_row()
+
+    def _find_average_column(self) -> int:
+        """Returns the column for the average mark column in the spreadsheet."""
+        raise NotImplementedError
+
+    def _find_last_student_row(self) -> int:
+        """Returns a row of the last student in the spreadsheet."""
+        raise NotImplementedError
+
+    def close(self) -> None:
+        """Closes the reader. No operations should be performed afterwards."""
+        self._reader.close()
+
+    def cell(self, col: int, row: int) -> Optional[Union[str, int, float]]:
+        """Boilerplate function for returning value at the specified column and row of the cell."""
+        return self._sheet.get_cell(col, row)
+
+    def create_summary(self) -> Summary:
+        """Attempts to create a Summary object.
+
+        May raise an exception."""
+        raise NotImplementedError
+
+
+class Parser(BaseParser):
+
+    def __init__(self, file_path: str) -> None:
+        super().__init__(file_path)
         # Obtain term start, end and type
         raw_term_value = self.cell(9, 2)
         # Laikotarpis: 2020-2021m.m.II pusmetis -> 2020-2021m.m.II pusmetis
@@ -24,20 +66,9 @@ class Parser:
         self.term_end = int(term_value[1][:4])
         self.type = term_value[1][8:]
 
-        self._average_col = None
-        self._last_student_row = None
-
         self._subject_name_cache = {}
 
-    def close(self) -> None:
-        """Closes the reader. No operations should be performed afterwards."""
-        self._reader.close()
-
-    def cell(self, col: int, row: int) -> Optional[Union[str, int, float]]:
-        """Boilerplate function for returning value at the specified column and row of the cell."""
-        return self._sheet.get_cell(col, row)
-
-    def find_average_column(self) -> int:
+    def _find_average_column(self) -> int:
         """Returns the column for the average mark column."""
         if self._average_col is None:
             off_col = 2
@@ -50,7 +81,7 @@ class Parser:
             self._average_col = off_col + 1
         return self._average_col
 
-    def find_last_student_row(self) -> int:
+    def _find_last_student_row(self) -> int:
         """Returns a row of the last student."""
         if self._last_student_row is None:
             off_row = 13
@@ -62,18 +93,6 @@ class Parser:
                 off_row += 1
             self._last_student_row = off_row
         return self._last_student_row
-
-    @property
-    def average_mark_column(self) -> int:
-        return self.find_average_column()
-
-    @property
-    def last_student_row(self) -> int:
-        return self.find_last_student_row()
-
-    def get_school_name(self) -> str:
-        """Returns the name of the school."""
-        return self.cell(1, 1)[9:]
 
     def get_grade_name(self) -> str:
         """Returns the name of the grade."""
@@ -132,7 +151,6 @@ class Parser:
             ))
 
         return Summary(
-            self.get_school_name(),
             self.get_grade_name(),
             self.type,
             (self.term_start, self.term_end),
