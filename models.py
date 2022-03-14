@@ -1,4 +1,4 @@
-import math
+import datetime
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
@@ -200,6 +200,39 @@ class Student:
             s for s in self.subjects
             if not s.is_ignored # If subject is not ignored
         ]
+
+class Summary2:
+
+    def __init__(
+        self,
+        grade_name: str,
+        sum_period: Tuple[datetime.datetime, datetime.datetime],
+        students: List[Student]
+    ) -> None:
+        self.grade_name = grade_name
+        # For grades which are not gymnasium ones
+        if grade_name.isdigit():
+            self.grade_name = grade_name + " klasė"
+        self.term_start, self.term_end = sum_period
+        self.students = students
+
+    def __repr__(self) -> str:
+        return f'<Summary2 period="{self.term_start}-{self.term_end}" students={len(self.students)}>'
+
+    @property
+    def grade_name_as_int(self) -> int:
+        """Returns grade name representation as an integer."""
+        value = self.grade_name.split(" ")[0]
+        try:
+            return int(value)
+        except ValueError:
+            return ROMAN_VALUE_BINDINGS.get(value, -1)
+
+    @property
+    def representable_name(self) -> str:
+        """Returns a human representable name of the summary."""
+        return f'{self.term_start.strftime("%Y-%m-%d")} - {self.term_end.strftime("%Y-%m-%d")}'
+
 
 class Summary:
 

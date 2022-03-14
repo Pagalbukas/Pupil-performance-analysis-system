@@ -162,7 +162,7 @@ class BaseGraph:
         plt.show()
 
 
-class StudentAveragesGraph(BaseGraph):
+class ClassAveragesGraph(BaseGraph):
 
     def __init__(self, title: str, period_names: List[str], anonymize_names: bool = False, perform_rounding: bool = False) -> None:
         super().__init__(title)
@@ -218,3 +218,56 @@ class StudentAveragesGraph(BaseGraph):
         if self.anonymize_names:
             self.anonymize_students()
         return (self.period_names, self.get_graph_values())
+
+
+class ClassPeriodAveragesGraph(ClassAveragesGraph):
+
+    def __init__(self, title: str, period_names: List[str], anonymize_names: bool = False, perform_rounding: bool = False) -> None:
+        super().__init__(title, period_names, anonymize_names, perform_rounding)
+
+class ClassMonthlyAveragesGraph(ClassAveragesGraph):
+
+    def __init__(self, title: str, period_names: List[str], anonymize_names: bool = False, perform_rounding: bool = False) -> None:
+        super().__init__(title, period_names, anonymize_names, perform_rounding)
+
+class PupilSubjectAveragesGraph(BaseGraph):
+
+    def __init__(self, title: str, period_names: List[str], perform_rounding: bool = False) -> None:
+        super().__init__(title)
+        self.period_names = period_names
+        self.students = {}
+        self.subject_lists: List[list] = []
+        self.perform_rounding = perform_rounding
+
+    def add_subject_list(self, subjects):
+        self.subject_lists.append(subjects)
+
+    def get_graph_values(self) -> List[GraphValue]:
+        max_size = -1
+        for subject_list in self.subject_lists:
+            max_size = max(max_size, len(subject_list))
+
+        subjects: List[GraphValue] = [GraphValue(None, [None for _ in range(len(self.period_names))]) for _ in range(max_size)]
+
+        for i, subject_list in enumerate(self.subject_lists):
+            for j, subject in enumerate(subject_list):
+                subjects[j].label = subject.generic_name
+                subjects[j].values[i] = subject.clean_mark
+        print(subjects)
+
+        new_arr = []
+        for i, subject in enumerate(subjects.copy()):
+            print(subject.label)
+            if not subject.values == [None] * len(subject.values):
+                new_arr.append(subject)
+
+        return new_arr
+
+    def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
+        print(self.period_names, self.get_graph_values())
+        return (self.period_names, self.get_graph_values())
+
+class PupilSubjectMonthlyAveragesGraph(PupilSubjectAveragesGraph):
+
+    def __init__(self, title: str, period_names: List[str], perform_rounding: bool = False) -> None:
+        super().__init__(title, period_names, perform_rounding)
