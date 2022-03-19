@@ -251,7 +251,7 @@ class ClassSemesterReportSummary:
         self.students = students
 
     def __repr__(self) -> str:
-        return f'<Summary type="{self.type}" period="{self.term_start}-{self.term_end}" students={len(self.students)}>'
+        return f'<ClassSemesterReportSummary type="{self.type}" period="{self.term_start}-{self.term_end}" students={len(self.students)}>'
 
     @property
     def type_as_int(self) -> int:
