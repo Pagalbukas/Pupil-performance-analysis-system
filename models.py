@@ -201,7 +201,7 @@ class Student:
             if not s.is_ignored # If subject is not ignored
         ]
 
-class Summary2:
+class ClassMonthlyReportSummary:
 
     def __init__(
         self,
@@ -217,7 +217,7 @@ class Summary2:
         self.students = students
 
     def __repr__(self) -> str:
-        return f'<Summary2 period="{self.term_start}-{self.term_end}" students={len(self.students)}>'
+        return f'<ClassMonthlyReportSummary period="{self.term_start}-{self.term_end}" students={len(self.students)}>'
 
     @property
     def grade_name_as_int(self) -> int:
@@ -234,7 +234,7 @@ class Summary2:
         return f'{self.term_start.strftime("%Y-%m-%d")} - {self.term_end.strftime("%Y-%m-%d")}'
 
 
-class Summary:
+class ClassSemesterReportSummary:
 
     def __init__(
         self,

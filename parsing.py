@@ -2,8 +2,8 @@ import datetime
 
 from typing import TYPE_CHECKING, List, Optional, Union
 
-from reader import SpreadsheetReader
-from models import Student, Subject, Summary, Summary2
+from reading import SpreadsheetReader
+from models import Student, Subject, ClassSemesterReportSummary, ClassMonthlyReportSummary
 
 class ParsingError(Exception):
 
@@ -47,14 +47,14 @@ class BaseParser:
         """Boilerplate function for returning value at the specified column and row of the cell."""
         return self._sheet.get_cell(col, row)
 
-    def create_summary(self) -> Summary:
+    def create_summary(self) -> None:
         """Attempts to create a Summary object.
 
         May raise an exception."""
         raise NotImplementedError
 
 
-class Parser(BaseParser):
+class PupilSemesterReportParser(BaseParser):
 
     def __init__(self, file_path: str) -> None:
         super().__init__(file_path)
@@ -135,7 +135,7 @@ class Parser(BaseParser):
             return None
         return value
 
-    def create_summary(self, fetch_subjects: bool = True) -> Summary:
+    def create_summary(self, fetch_subjects: bool = True) -> ClassSemesterReportSummary:
         """Attempts to create a Summary object.
 
         May raise an exception."""
@@ -152,14 +152,14 @@ class Parser(BaseParser):
                 " Įsitikinkite ar pusmetis/trimestras yra tikrai ir pilnai išvestas!"
             ))
 
-        return Summary(
+        return ClassSemesterReportSummary(
             self.get_grade_name(),
             self.type,
             (self.term_start, self.term_end),
             self.get_student_data(fetch_subjects)
         )
 
-class PupilAMonthlyAveragesParser(BaseParser):
+class PupilMonthlyReportParser(BaseParser):
 
     def __init__(self, file_path: str) -> None:
         super().__init__(file_path)
@@ -236,7 +236,7 @@ class PupilAMonthlyAveragesParser(BaseParser):
             return None
         return value
 
-    def create_summary(self, fetch_subjects: bool = True) -> Summary:
+    def create_summary(self, fetch_subjects: bool = True) -> ClassMonthlyReportSummary:
         """Attempts to create a Summary object.
 
         May raise an exception."""
@@ -253,7 +253,7 @@ class PupilAMonthlyAveragesParser(BaseParser):
                 " Įsitikinkite ar pusmetis/trimestras yra tikrai ir pilnai išvestas!"
             ))
 
-        return Summary2(
+        return ClassMonthlyReportSummary(
             self.get_grade_name(),
             (self.term_start, self.term_end),
             self.get_student_data(fetch_subjects)

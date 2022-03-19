@@ -5,9 +5,9 @@ import traceback
 from PyQt5.QtWidgets import QWidget, QFileDialog, QPushButton, QVBoxLayout, QDesktopWidget
 from typing import List
 
-from graphs.base import PupilSubjectMonthlyAveragesGraph, ClassPeriodAveragesGraph, ClassMonthlyAveragesGraph
-from models import Summary, Summary2, Student
-from parser2 import Parser, ParsingError, PupilAMonthlyAveragesParser
+from graphing import PupilSubjectMonthlyAveragesGraph, ClassPeriodAveragesGraph, ClassMonthlyAveragesGraph
+from models import ClassSemesterReportSummary, ClassMonthlyReportSummary, Student
+from parsing import PupilSemesterReportParser, PupilMonthlyReportParser, ParsingError
 from utils import ConsoleUtils as CU
 from settings import Settings
 
@@ -54,13 +54,13 @@ class App(QWidget):
 
     def d_mon_agg(self):
         filenames = self.ask_files_dialog()
-        summaries: List[Summary2] = []
+        summaries: List[ClassMonthlyReportSummary] = []
         for filename in filenames:
             start_time = timeit.default_timer()
             base_name = os.path.basename(filename)
 
             try:
-                parser = PupilAMonthlyAveragesParser(filename)
+                parser = PupilMonthlyReportParser(filename)
                 summary = parser.create_summary(fetch_subjects=True)
                 parser.close()
             except ParsingError as e:
@@ -138,13 +138,13 @@ class App(QWidget):
         filenames = self.ask_files_dialog()
 
         # Do initial creation of summaries by iterating the submitted files and validating them
-        summaries: List[Summary] = []
+        summaries: List[ClassSemesterReportSummary] = []
         for filename in filenames:
             start_time = timeit.default_timer()
             base_name = os.path.basename(filename)
 
             try:
-                parser = Parser(filename)
+                parser = PupilSemesterReportParser(filename)
                 summary = parser.create_summary(fetch_subjects=True)
                 parser.close()
             except ParsingError as e:
@@ -222,13 +222,13 @@ class App(QWidget):
 
     def d_mon_pup(self):
         filenames = self.ask_files_dialog()
-        summaries: List[Summary2] = []
+        summaries: List[ClassMonthlyReportSummary] = []
         for filename in filenames:
             start_time = timeit.default_timer()
             base_name = os.path.basename(filename)
 
             try:
-                parser = PupilAMonthlyAveragesParser(filename)
+                parser = PupilMonthlyReportParser(filename)
                 summary = parser.create_summary(fetch_subjects=True)
                 parser.close()
             except ParsingError as e:
