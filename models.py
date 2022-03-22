@@ -233,6 +233,11 @@ class ClassMonthlyReportSummary:
         """Returns a human representable name of the summary."""
         return f'{self.term_start.strftime("%Y-%m-%d")} - {self.term_end.strftime("%Y-%m-%d")}'
 
+    @property
+    def yearless_representable_name(self) -> str:
+        """Returns a human representable name of the summary without the year."""
+        return f'{self.term_start.strftime("%m-%d")} - {self.term_end.strftime("%m-%d")}'
+
 
 class ClassSemesterReportSummary:
 

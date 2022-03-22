@@ -2,7 +2,7 @@ import os
 import timeit
 import traceback
 
-from PyQt5.QtWidgets import QWidget, QFileDialog, QPushButton, QVBoxLayout, QDesktopWidget
+from PyQt5.QtWidgets import QWidget, QFileDialog, QPushButton, QVBoxLayout, QDesktopWidget, QMessageBox
 from typing import List
 
 from graphing import PupilSubjectMonthlyAveragesGraph, ClassPeriodAveragesGraph, ClassMonthlyAveragesGraph
@@ -52,92 +52,8 @@ class App(QWidget):
         self.move(qtRectangle.topLeft())
         self.show()
 
-    def d_mon_agg(self):
+    def request_semester_summaries(self) -> List[ClassSemesterReportSummary]:
         filenames = self.ask_files_dialog()
-        summaries: List[ClassMonthlyReportSummary] = []
-        for filename in filenames:
-            start_time = timeit.default_timer()
-            base_name = os.path.basename(filename)
-
-            try:
-                parser = PupilMonthlyReportParser(filename)
-                summary = parser.create_summary(fetch_subjects=True)
-                parser.close()
-            except ParsingError as e:
-                CU.parse_error(base_name, str(e))
-                continue
-            except Exception as e:
-                CU.parse_error(base_name, "pateikta ne suvestinė arba netinkamas failas")
-                if self.debug:
-                    print(e)
-                    traceback.print_tb(e.__traceback__)
-                continue
-
-            if any(s for s in summaries if s.representable_name == summary.representable_name):
-                CU.parse_error(base_name, "tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
-                continue
-
-            summaries.append(summary)
-            CU.default(f"'{base_name}' perskaitytas")
-            if self.debug:
-                print(f"'{base_name}' skaitymas užtruko {timeit.default_timer() - start_time}s")
-
-        if len(summaries) == 0:
-            CU.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
-            return
-
-        # Sort summaries by
-        # 1) term start (YYYY-MM-DD)
-        summaries.sort(key=lambda s: (s.term_start))
-
-        # Get the last (the most recent) statistical data and cache student names for later use
-        student_cache = [s.name for s in summaries[-1].students]
-
-        # Go over each summary and use it to create graph points
-        _temp_subject_name_dict = {}
-        graph = ClassMonthlyAveragesGraph(summary.grade_name + " mokinių mėnėsiniai vidurkiai", [s.representable_name for s in summaries])
-        for i, summary in enumerate(summaries):
-            CU.info(f"Nagrinėjamas ({summary.term_start}-{summary.term_end})")
-            _cached_subs = []
-            for student in summary.students:
-
-                # If student name is not in cache, ignore them
-                if student.name not in student_cache:
-                    CU.warn(f"Mokinys '{student.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
-                    continue
-
-                subjects = student.get_graphing_subjects()
-
-                # Notify user regarding different generic and original subject names
-                # Not in use as of now, but future proofing
-                for subject in subjects:
-                    if subject.name not in _cached_subs:
-                        if subject.name != subject.generic_name:
-                            CU.warn(f"Dalykas '{subject.name}' automatiškai pervadintas į '{subject.generic_name}'")
-                        _cached_subs.append(subject.name)
-
-                    if _temp_subject_name_dict.get(subject.name, None) is None:
-                        _temp_subject_name_dict[subject.name] = (subject.generic_name, summary.grade_name_as_int)
-
-                graph.get_or_create_student(student.name)[i] = student.average
-
-        if self.debug:
-            for key in _temp_subject_name_dict.keys():
-                name, grade = _temp_subject_name_dict[key]
-                print(key, "->", name, f"({grade} kl.)")
-
-        graph.display(
-            use_styled_colouring=True,
-            use_experimental_legend=True
-        )
-
-    def request_parsing(self):
-        pass
-
-    def d_sem_agg(self):
-        filenames = self.ask_files_dialog()
-
-        # Do initial creation of summaries by iterating the submitted files and validating them
         summaries: List[ClassSemesterReportSummary] = []
         for filename in filenames:
             start_time = timeit.default_timer()
@@ -172,7 +88,46 @@ class App(QWidget):
 
         if len(summaries) == 0:
             CU.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
-            return
+        return summaries
+
+    def request_monthly_summaries(self) -> List[ClassMonthlyReportSummary]:
+        filenames = self.ask_files_dialog()
+        summaries: List[ClassMonthlyReportSummary] = []
+        for filename in filenames:
+            start_time = timeit.default_timer()
+            base_name = os.path.basename(filename)
+
+            try:
+                parser = PupilMonthlyReportParser(filename)
+                summary = parser.create_summary(fetch_subjects=True)
+                parser.close()
+            except ParsingError as e:
+                CU.parse_error(base_name, str(e))
+                continue
+            except Exception as e:
+                CU.parse_error(base_name, "pateikta ne suvestinė arba netinkamas failas")
+                if self.debug:
+                    print(e)
+                    traceback.print_tb(e.__traceback__)
+                continue
+
+            if any(s for s in summaries if s.representable_name == summary.representable_name):
+                CU.parse_error(base_name, "tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
+                continue
+
+            summaries.append(summary)
+            CU.default(f"'{base_name}' perskaitytas")
+            if self.debug:
+                print(f"'{base_name}' skaitymas užtruko {timeit.default_timer() - start_time}s")
+
+        if len(summaries) == 0:
+            CU.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
+        return summaries
+
+    def d_sem_agg(self):
+        summaries = self.request_semester_summaries()
+        if len(summaries) == 0:
+            return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
 
         # Sort summaries by
         # 1) term start (year)
@@ -180,7 +135,8 @@ class App(QWidget):
         summaries.sort(key=lambda s: (s.term_start, s.type_as_int))
 
         # Get the last (the most recent) statistical data and cache student names for later use
-        student_cache = [s.name for s in summaries[-1].students]
+        summary = summaries[-1]
+        student_cache = [s.name for s in summary.students]
 
         # Go over each summary and use it to create graph points
         _temp_subject_name_dict = {}
@@ -216,49 +172,77 @@ class App(QWidget):
                 print(key, "->", name, f"({grade} kl.)")
 
         graph.display(
-            use_styled_colouring=True,
             use_experimental_legend=True
         )
 
-    def d_mon_pup(self):
-        filenames = self.ask_files_dialog()
-        summaries: List[ClassMonthlyReportSummary] = []
-        for filename in filenames:
-            start_time = timeit.default_timer()
-            base_name = os.path.basename(filename)
-
-            try:
-                parser = PupilMonthlyReportParser(filename)
-                summary = parser.create_summary(fetch_subjects=True)
-                parser.close()
-            except ParsingError as e:
-                CU.parse_error(base_name, str(e))
-                continue
-            except Exception as e:
-                CU.parse_error(base_name, "pateikta ne suvestinė arba netinkamas failas")
-                if self.debug:
-                    print(e)
-                    traceback.print_tb(e.__traceback__)
-                continue
-
-            if any(s for s in summaries if s.representable_name == summary.representable_name):
-                CU.parse_error(base_name, "tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
-                continue
-
-            summaries.append(summary)
-            CU.default(f"'{base_name}' perskaitytas")
-            if self.debug:
-                print(f"'{base_name}' skaitymas užtruko {timeit.default_timer() - start_time}s")
-
+    def d_mon_agg(self):
+        summaries = self.request_monthly_summaries()
         if len(summaries) == 0:
-            CU.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
-            return
+            return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
 
         # Sort summaries by
         # 1) term start (YYYY-MM-DD)
         summaries.sort(key=lambda s: (s.term_start))
 
         # Get the last (the most recent) statistical data and cache student names for later use
+        summary = summaries[-1]
+        student_cache = [s.name for s in summary.students]
+
+        # Determine graph title
+        graph_title = summary.grade_name + " mokinių mėnėsiniai vidurkiai\n"
+        if summaries[0].term_start.year == summary.term_start.year:
+            graph_title += str(summary.term_start.year)
+        else:
+            graph_title += f'{summaries[0].term_start.year} - {summary.term_start.year}'
+
+        # Go over each summary and use it to create graph points
+        _temp_subject_name_dict = {}
+        graph = ClassMonthlyAveragesGraph(graph_title, [s.yearless_representable_name for s in summaries])
+        for i, summary in enumerate(summaries):
+            CU.info(f"Nagrinėjamas ({summary.term_start}-{summary.term_end})")
+            _cached_subs = []
+            for student in summary.students:
+
+                # If student name is not in cache, ignore them
+                if student.name not in student_cache:
+                    CU.warn(f"Mokinys '{student.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
+                    continue
+
+                subjects = student.get_graphing_subjects()
+
+                # Notify user regarding different generic and original subject names
+                # Not in use as of now, but future proofing
+                for subject in subjects:
+                    if subject.name not in _cached_subs:
+                        if subject.name != subject.generic_name:
+                            CU.warn(f"Dalykas '{subject.name}' automatiškai pervadintas į '{subject.generic_name}'")
+                        _cached_subs.append(subject.name)
+
+                    if _temp_subject_name_dict.get(subject.name, None) is None:
+                        _temp_subject_name_dict[subject.name] = (subject.generic_name, summary.grade_name_as_int)
+
+                graph.get_or_create_student(student.name)[i] = student.average
+
+        if self.debug:
+            for key in _temp_subject_name_dict.keys():
+                name, grade = _temp_subject_name_dict[key]
+                print(key, "->", name, f"({grade} kl.)")
+
+        graph.display(
+            use_experimental_legend=True
+        )
+
+    def d_mon_pup(self):
+        summaries = self.request_monthly_summaries()
+        if len(summaries) == 0:
+            return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
+
+        # Sort summaries by
+        # 1) term start (YYYY-MM-DD)
+        summaries.sort(key=lambda s: (s.term_start))
+
+        # Get the last (the most recent) statistical data and cache student names for later use
+        summary = summaries[-1]
         student_cache = [s.name for s in summaries[-1].students]
         students: List[List[Student]] = [[] for _ in range(len(summaries[-1].students))]
 
@@ -284,27 +268,20 @@ class App(QWidget):
                             CU.warn(f"Dalykas '{subject.name}' automatiškai pervadintas į '{subject.generic_name}'")
                         _cached_subs.append(subject.name)
 
-                #graph.get_or_create_student(student.name)[i] = student.average
-
-        print(student_cache)
-        print(students)
-
+        # TODO: refactor to open a student list instead of spamming it
         for student in students:
             name = student[0].name
             graph = PupilSubjectMonthlyAveragesGraph(name, [s.representable_name for s in summaries])
             for s in student:
                 graph.add_subject_list(s.get_graphing_subjects())
 
-            print(name)
-            for i, d in enumerate(graph.subject_lists):
-                print(i, len(d))
-                for a in d:
-                    print(a.generic_name, a.clean_mark)
-
             graph.display(
-                use_styled_colouring=True,
                 use_experimental_legend=True
             )
+
+    def show_error_box(self, message: str) -> None:
+        """Displays a native error dialog."""
+        QMessageBox.critical(self, "Įvyko klaida", message, QMessageBox.Ok, QMessageBox.NoButton)
 
     def ask_files_dialog(self, caption: str = "Pasirinkite Excel ataskaitų failus") -> List[str]:
         directory = self.settings.last_dir
