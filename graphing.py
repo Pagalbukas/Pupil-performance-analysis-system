@@ -44,7 +44,7 @@ class BaseGraph:
 
     def display(
         self,
-        use_styled_colouring: bool = False,
+        use_styled_colouring: bool = True,
         use_experimental_legend: bool = False
     ) -> None:
         """Instructs matplotlib to display a graph."""
@@ -158,7 +158,7 @@ class BaseGraph:
         if self.title:
             fig.suptitle(self.title, fontsize=16)
 
-        plt.gcf().canvas.set_window_title(self.title or 'Statistika')
+        plt.gcf().canvas.set_window_title(self.title.replace("\n", " "))
         plt.show()
 
 
@@ -253,18 +253,14 @@ class PupilSubjectAveragesGraph(BaseGraph):
             for j, subject in enumerate(subject_list):
                 subjects[j].label = subject.generic_name
                 subjects[j].values[i] = subject.clean_mark
-        print(subjects)
 
         new_arr = []
         for i, subject in enumerate(subjects.copy()):
-            print(subject.label)
             if not subject.values == [None] * len(subject.values):
                 new_arr.append(subject)
-
         return new_arr
 
     def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
-        print(self.period_names, self.get_graph_values())
         return (self.period_names, self.get_graph_values())
 
 class PupilSubjectMonthlyAveragesGraph(PupilSubjectAveragesGraph):
