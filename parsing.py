@@ -163,13 +163,9 @@ class PupilMonthlyReportParser(BaseParser):
 
     def __init__(self, file_path: str) -> None:
         super().__init__(file_path)
-
         term_value = self.cell(7, 1).split(" - ")
         self.term_start = datetime.datetime.strptime(term_value[0], "%Y-%m-%d")
         self.term_end = datetime.datetime.strptime(term_value[1], "%Y-%m-%d")
-
-        print(self.term_start, self.term_start.tzinfo, self.term_start.tzname())
-        print(self.term_end, self.term_end.tzinfo, self.term_end.tzname())
 
         self._subject_name_cache = {}
 
