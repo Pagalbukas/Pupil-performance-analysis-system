@@ -2,7 +2,7 @@ import os
 import timeit
 import traceback
 
-from PyQt5.QtWidgets import QWidget, QFileDialog, QPushButton, QVBoxLayout, QDesktopWidget, QMessageBox
+from PyQt5.QtWidgets import QWidget, QFileDialog, QPushButton, QVBoxLayout, QDesktopWidget, QMessageBox, QListWidget, QStackedWidget, QLabel
 from typing import List
 
 from graphing import PupilSubjectMonthlyAveragesGraph, ClassPeriodAveragesGraph, ClassMonthlyAveragesGraph
@@ -19,6 +19,8 @@ class App(QWidget):
         self.settings = settings
         self.debug = settings.debugging
 
+        self.view_aggregated = False
+
         self.setWindowTitle('Mokinių pasiekimų analizatorius')
 
         self.left = 10
@@ -26,23 +28,89 @@ class App(QWidget):
         self.width = 640
         self.height = 480
 
-        self.main_layout = QVBoxLayout()
+        self.stack = QStackedWidget()
 
-        self.agg_sem_button = QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
-        self.pup_mon_button = QPushButton('Mokinio dalykų vidurkių ataskaita pagal laikotarpį')
-        self.agg_mon_button = QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
+        # Define generic catch-all button to returning to start
+        self.back_button = QPushButton('Atgal į startą')
+        self.back_button.clicked.connect(self.go_to_back)
 
-        self.agg_sem_button.clicked.connect(self.d_sem_agg)
-        self.pup_mon_button.clicked.connect(self.d_mon_pup)
-        self.agg_mon_button.clicked.connect(self.d_mon_agg)
+        # Initialize QWidgets
+        self.main_widget = QWidget()
+        self.select_graph_widget = QWidget()
+        self._init_main_widget()
+        self._init_select_graph_widget()
 
-        self.main_layout.addWidget(self.agg_sem_button)
-        self.main_layout.addWidget(self.pup_mon_button)
-        self.main_layout.addWidget(self.agg_mon_button)
+        # Add said widgets to the StackedWidget
+        self.stack.addWidget(self.main_widget)
+        self.stack.addWidget(self.select_graph_widget)
 
-        self.setLayout(self.main_layout)
+        self.login_widget = QWidget()
+        self.select_class_widget = QWidget()
+        self.select_timeframe_widget = QWidget()
+        self.pupil_list_widget = QWidget()
+
+        #qliste = QListWidget()
+        #for i in range(30):
+        #    qliste.insertItem(i, str(i))
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.stack)
+        self.setLayout(main_layout)
 
         self.initUI()
+
+    def _init_main_widget(self):
+        layout = QVBoxLayout()
+        agg_sem_button = QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
+        pup_mon_button = QPushButton('Mokinio dalykų vidurkių ataskaita pagal laikotarpį')
+        agg_mon_button = QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
+
+        agg_sem_button.clicked.connect(self.d_sem_agg)
+        pup_mon_button.clicked.connect(self.view_pupil_monthly)
+        agg_mon_button.clicked.connect(self.view_aggregated_monthly)
+
+        layout.addWidget(agg_sem_button)
+        layout.addWidget(pup_mon_button)
+        layout.addWidget(agg_mon_button)
+        self.main_widget.setLayout(layout)
+
+    def _init_select_graph_widget(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Pasirinkite kokiu būdų norite pateikti nagrinėjamus duomenis"))
+        manual_button = QPushButton('Rankiniu būdų')
+        auto_button = QPushButton('Automatiškai iš \'Mano Dienynas\' sistemos')
+        auto_button.setEnabled(False)
+
+        manual_button.clicked.connect(self.determine_graph_type)
+        layout.addWidget(manual_button)
+        layout.addWidget(auto_button)
+        layout.addWidget(self.back_button)
+        self.select_graph_widget.setLayout(layout)
+
+    def go_to_back(self) -> None:
+        self.view_aggregated = False
+        self.change_stack(0)
+
+    def change_stack(self, index: int) -> None:
+        self.stack.setCurrentIndex(index)
+
+    def view_aggregated_monthly(self):
+        self.view_aggregated = True
+        self.change_stack(1)
+
+    def view_pupil_monthly(self):
+        self.view_aggregated = False
+        self.change_stack(1)
+
+    def determine_graph_type(self):
+        summaries = self.request_monthly_summaries()
+        if len(summaries) == 0:
+            return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
+
+        if self.view_aggregated:
+            self.d_mon_agg(summaries)
+        else:
+            self.d_mon_pup(summaries)
 
     def initUI(self):
         self.setGeometry(self.left, self.top, self.width, self.height)
@@ -175,11 +243,7 @@ class App(QWidget):
             use_experimental_legend=True
         )
 
-    def d_mon_agg(self):
-        summaries = self.request_monthly_summaries()
-        if len(summaries) == 0:
-            return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
-
+    def d_mon_agg(self, summaries: List[ClassMonthlyReportSummary]):
         # Sort summaries by
         # 1) term start (YYYY-MM-DD)
         summaries.sort(key=lambda s: (s.term_start))
@@ -231,12 +295,9 @@ class App(QWidget):
         graph.display(
             use_experimental_legend=True
         )
+        self.go_to_back()
 
-    def d_mon_pup(self):
-        summaries = self.request_monthly_summaries()
-        if len(summaries) == 0:
-            return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
-
+    def d_mon_pup(self, summaries: List[ClassMonthlyReportSummary]):
         # Sort summaries by
         # 1) term start (YYYY-MM-DD)
         summaries.sort(key=lambda s: (s.term_start))
