@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import timeit
 import traceback
@@ -11,7 +13,70 @@ from parsing import PupilSemesterReportParser, PupilMonthlyReportParser, Parsing
 from utils import ConsoleUtils as CU
 from settings import Settings
 
+class PupilSelectionWidget(QWidget):
+
+    def __init__(self, app: App) -> None:
+        super().__init__()
+        self.app = app
+
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Pasirinkite kurį mokinį norite nagrinėti"))
+        self.subject_button = QPushButton('Dalykų vidurkiai')
+        self.aggregated_button = QPushButton('Bendras vidurkis')
+        back_button = QPushButton('Atgal į startą')
+
+        # Disable both buttons by default
+        self.disable_buttons()
+
+        # Create a list of student names
+        self.name_list = QListWidget()
+
+        selected_graph = None
+
+        def select_name():
+            # Not best practise, but bash me all you want
+            nonlocal selected_graph
+            indexes = self.name_list.selectedIndexes()
+            if len(indexes) == 0:
+                return
+            index = indexes[0].row()
+            self.subject_button.setEnabled(True)
+            selected_graph = self.graphs[index]
+
+        def display_subject_graph():
+            if selected_graph is None:
+                return
+            selected_graph.display()
+
+        # Bind the events
+        self.name_list.itemSelectionChanged.connect(select_name)
+        self.subject_button.clicked.connect(display_subject_graph)
+        back_button.clicked.connect(self.app.go_to_back)
+
+        layout.addWidget(self.name_list)
+        layout.addWidget(self.subject_button)
+        layout.addWidget(self.aggregated_button)
+        layout.addWidget(back_button)
+
+        self.setLayout(layout)
+
+    def disable_buttons(self):
+        self.subject_button.setEnabled(False)
+        self.aggregated_button.setEnabled(False)
+
+    def populate_list(self, graphs: List[PupilSubjectMonthlyAveragesGraph]):
+        self.graphs = graphs
+        self.name_list.clearSelection()
+        self.name_list.clear()
+        for i, graph in enumerate(graphs):
+            self.name_list.insertItem(i, graph.title)
+        self.disable_buttons()
+
 class App(QWidget):
+
+    MAIN_WIDGET = 0
+    SELECT_GRAPH_WIDGET = 1
+    SELECT_PUPIL_WIDGET = 2
 
     def __init__(self, settings: Settings):
         super().__init__()
@@ -39,19 +104,16 @@ class App(QWidget):
         self.select_graph_widget = QWidget()
         self._init_main_widget()
         self._init_select_graph_widget()
+        self.select_pupil_widget = PupilSelectionWidget(self)
 
         # Add said widgets to the StackedWidget
         self.stack.addWidget(self.main_widget)
         self.stack.addWidget(self.select_graph_widget)
+        self.stack.addWidget(self.select_pupil_widget)
 
         self.login_widget = QWidget()
         self.select_class_widget = QWidget()
         self.select_timeframe_widget = QWidget()
-        self.pupil_list_widget = QWidget()
-
-        #qliste = QListWidget()
-        #for i in range(30):
-        #    qliste.insertItem(i, str(i))
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.stack)
@@ -89,18 +151,18 @@ class App(QWidget):
 
     def go_to_back(self) -> None:
         self.view_aggregated = False
-        self.change_stack(0)
+        self.change_stack(self.MAIN_WIDGET)
 
     def change_stack(self, index: int) -> None:
         self.stack.setCurrentIndex(index)
 
     def view_aggregated_monthly(self):
         self.view_aggregated = True
-        self.change_stack(1)
+        self.change_stack(self.SELECT_GRAPH_WIDGET)
 
     def view_pupil_monthly(self):
         self.view_aggregated = False
-        self.change_stack(1)
+        self.change_stack(self.SELECT_GRAPH_WIDGET)
 
     def determine_graph_type(self):
         summaries = self.request_monthly_summaries()
@@ -329,16 +391,15 @@ class App(QWidget):
                             CU.warn(f"Dalykas '{subject.name}' automatiškai pervadintas į '{subject.generic_name}'")
                         _cached_subs.append(subject.name)
 
-        # TODO: refactor to open a student list instead of spamming it
+        graphs = []
         for student in students:
             name = student[0].name
             graph = PupilSubjectMonthlyAveragesGraph(name, [s.representable_name for s in summaries])
             for s in student:
                 graph.add_subject_list(s.get_graphing_subjects())
-
-            graph.display(
-                use_experimental_legend=True
-            )
+            graphs.append(graph)
+        self.select_pupil_widget.populate_list(graphs)
+        self.change_stack(self.SELECT_PUPIL_WIDGET)
 
     def show_error_box(self, message: str) -> None:
         """Displays a native error dialog."""
