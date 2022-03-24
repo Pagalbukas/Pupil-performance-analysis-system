@@ -21,12 +21,12 @@ from parsing import PupilSemesterReportParser, PupilMonthlyReportParser, Parsing
 from settings import Settings
 
 logger = logging.getLogger("analizatorius")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter('[%(name)s:%(levelname)s]: %(message)s')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
@@ -129,19 +129,16 @@ class PupilSelectionWidget(QWidget):
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
+        selected_graph = None
 
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Pasirinkite kurį mokinį norite nagrinėti"))
+        label = QLabel("Pasirinkite kurį mokinį norite nagrinėti")
+        self.name_list = QListWidget()
         self.subject_button = QPushButton('Dalykų vidurkiai')
         self.aggregated_button = QPushButton('Bendras vidurkis')
         back_button = QPushButton('Grįžti į pradžią')
 
-        # Create a list of student names
-        self.name_list = QListWidget()
-
-        selected_graph = None
-
-        def select_name():
+        def select_name() -> None:
             # Not best practise, but bash me all you want
             nonlocal selected_graph
             indexes = self.name_list.selectedIndexes()
@@ -151,7 +148,7 @@ class PupilSelectionWidget(QWidget):
             self.subject_button.setEnabled(True)
             selected_graph = self.graphs[index]
 
-        def display_subject_graph():
+        def display_subject_graph() -> None:
             if selected_graph is None:
                 return
             selected_graph.display()
@@ -161,18 +158,20 @@ class PupilSelectionWidget(QWidget):
         self.subject_button.clicked.connect(display_subject_graph)
         back_button.clicked.connect(self.app.go_to_back)
 
+        layout.addWidget(label)
         layout.addWidget(self.name_list)
         layout.addWidget(self.subject_button)
         layout.addWidget(self.aggregated_button)
         layout.addWidget(back_button)
-
         self.setLayout(layout)
 
-    def disable_buttons(self):
+    def disable_buttons(self) -> None:
+        """Disables per-subject or aggregated graph buttons."""
         self.subject_button.setEnabled(False)
         self.aggregated_button.setEnabled(False)
 
-    def populate_list(self, graphs: List[PupilSubjectMonthlyAveragesGraph]):
+    def populate_list(self, graphs: List[PupilSubjectMonthlyAveragesGraph]) -> None:
+        """Populates the name list."""
         self.graphs = graphs
         self.name_list.clearSelection()
         self.name_list.clear()
@@ -204,7 +203,6 @@ class LoginWidget(QWidget):
         layout.addWidget(self.password_field)
         layout.addWidget(self.login_button)
         layout.addWidget(self.back_button)
-
         self.setLayout(layout)
 
     def fill_fields(self) -> None:
@@ -232,19 +230,24 @@ class LoginWidget(QWidget):
         self.back_button.setEnabled(False)
 
     def propagate_error(self, error_msg: str) -> None:
+        """Display an error and re-enable the GUI."""
         self.enable_gui()
         self.app.show_error_box(error_msg)
 
     def on_error_signal(self, error: str) -> None:
+        """Callback of LoginTaskWorker thread on error."""
         self.propagate_error(error)
         self.login_thread.quit()
 
     def on_success_signal(self) -> None:
-        print("SUCCESS LOGIN")
+        """Callback of LoginTaskWorker thread on success."""
         self.login_thread.quit()
         self.app.change_stack(self.app.SELECT_CLASS_WIDGET)
 
     def login(self) -> None:
+        """Attempt to log into Mano Dienynas.
+
+        Starts a LoginTask worker thread."""
         username = self.username_field.text()
         password = self.password_field.text()
 
@@ -277,6 +280,10 @@ class App(QWidget):
         self.settings = settings
         self.debug = settings.debugging
         self.client = Client()
+
+        if self.debug:
+            logger.setLevel(logging.DEBUG)
+            ch.setLevel(logging.DEBUG)
 
         self.view_aggregated = False
 
@@ -311,10 +318,12 @@ class App(QWidget):
         self.initUI()
 
     def go_to_back(self) -> None:
+        """Return to the main widget."""
         self.view_aggregated = False
         self.change_stack(self.MAIN_WIDGET)
 
     def change_stack(self, index: int) -> None:
+        """Change current stack widget."""
         self.stack.setCurrentIndex(index)
 
     def view_aggregated_monthly(self):
@@ -348,10 +357,10 @@ class App(QWidget):
         self.move(qtRectangle.topLeft())
         self.show()
 
-    def generate_semester_summaries(self) -> List[ClassSemesterReportSummary]:
-        filenames = self.ask_files_dialog()
+    def generate_semester_summaries(self, files: List[str]) -> List[ClassSemesterReportSummary]:
+        """Generates a list of semester type summaries."""
         summaries: List[ClassSemesterReportSummary] = []
-        for filename in filenames:
+        for filename in files:
             start_time = timeit.default_timer()
             base_name = os.path.basename(filename)
 
@@ -374,15 +383,15 @@ class App(QWidget):
                 logger.warn(f"{base_name}: tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
                 continue
 
+            logger.debug(f"{base_name}: skaitymas užtruko {timeit.default_timer() - start_time}s")
             summaries.append(summary)
-            if self.debug:
-                logger.debug(f"{base_name}: skaitymas užtruko {timeit.default_timer() - start_time}s")
 
         if len(summaries) == 0:
             logger.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
         return summaries
 
     def generate_monthly_summaries(self, files: List[str]) -> List[ClassMonthlyReportSummary]:
+        """Generates a list of monthly summaries."""
         summaries: List[ClassMonthlyReportSummary] = []
         for filename in files:
             start_time = timeit.default_timer()
@@ -403,16 +412,19 @@ class App(QWidget):
                 logger.warn(f"{base_name}: tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
                 continue
 
+            logger.debug(f"{base_name}: skaitymas užtruko {timeit.default_timer() - start_time}s")
             summaries.append(summary)
-            if self.debug:
-                logger.debug(f"{base_name}: skaitymas užtruko {timeit.default_timer() - start_time}s")
 
         if len(summaries) == 0:
             logger.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
         return summaries
 
     def d_sem_agg(self):
-        summaries = self.generate_semester_summaries()
+        files = self.ask_files_dialog()
+        if len(files) == 0:
+            return
+
+        summaries = self.generate_semester_summaries(files)
         if len(summaries) == 0:
             return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
 
@@ -426,7 +438,7 @@ class App(QWidget):
         student_cache = [s.name for s in summary.students]
 
         # Go over each summary and use it to create graph points
-        graph = ClassPeriodAveragesGraph(summary.grade_name + " mokinių vidurkių pokytis", [s.representable_name for s in summaries])
+        graph = ClassPeriodAveragesGraph(summary.grade_name + " mokinių bendrų vidurkių pokytis", [s.representable_name for s in summaries])
         for i, summary in enumerate(summaries):
             logger.info(f"Nagrinėjamas {summary.period_name} ({summary.term_start}-{summary.term_end})")
             for student in summary.students:
