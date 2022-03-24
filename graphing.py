@@ -79,7 +79,6 @@ class BaseGraph:
         self.title = title
 
     def set_limits(self, ax) -> None:
-        ax.set_ylim(top=10.2)
         ax.set_ylabel('Vidurkis')
         ax.set_xlabel('Laikotarpis')
 
