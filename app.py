@@ -165,7 +165,11 @@ class App(QWidget):
         self.change_stack(self.SELECT_GRAPH_WIDGET)
 
     def determine_graph_type(self):
-        summaries = self.request_monthly_summaries()
+        filenames = self.ask_files_dialog()
+        if len(filenames) == 0:
+            return
+
+        summaries = self.generate_monthly_summaries(filenames)
         if len(summaries) == 0:
             return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
 
@@ -219,10 +223,9 @@ class App(QWidget):
             CU.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
         return summaries
 
-    def request_monthly_summaries(self) -> List[ClassMonthlyReportSummary]:
-        filenames = self.ask_files_dialog()
+    def generate_monthly_summaries(self, files: List[str]) -> List[ClassMonthlyReportSummary]:
         summaries: List[ClassMonthlyReportSummary] = []
-        for filename in filenames:
+        for filename in files:
             start_time = timeit.default_timer()
             base_name = os.path.basename(filename)
 
