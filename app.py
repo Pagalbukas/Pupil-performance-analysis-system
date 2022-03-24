@@ -170,9 +170,8 @@ class App(QWidget):
             return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
 
         if self.view_aggregated:
-            self.d_mon_agg(summaries)
-        else:
-            self.d_mon_pup(summaries)
+            return self.d_mon_agg(summaries)
+        self.d_mon_pup(summaries)
 
     def initUI(self):
         self.setGeometry(self.left, self.top, self.width, self.height)
@@ -369,9 +368,10 @@ class App(QWidget):
         student_cache = [s.name for s in summaries[-1].students]
         students: List[List[Student]] = [[] for _ in range(len(summaries[-1].students))]
 
-        for i, summary in enumerate(summaries):
+        for summary in summaries:
             CU.info(f"Nagrinėjamas laikotarpis: {summary.representable_name}")
-            _cached_subs = []
+            if self.debug:
+                _cached_subs = []
             for j, student in enumerate(summary.students):
 
                 # If student name is not in cache, ignore them
@@ -379,17 +379,16 @@ class App(QWidget):
                     CU.warn(f"Mokinys '{student.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
                     continue
 
-                subjects = student.get_graphing_subjects()
-
                 students[j].append(student)
 
                 # Notify user regarding different generic and original subject names
                 # Not in use as of now, but future proofing
-                for subject in subjects:
-                    if subject.name not in _cached_subs:
-                        if subject.name != subject.generic_name:
-                            CU.warn(f"Dalykas '{subject.name}' automatiškai pervadintas į '{subject.generic_name}'")
-                        _cached_subs.append(subject.name)
+                if self.debug:
+                    for subject in student.get_graphing_subjects():
+                        if subject.name not in _cached_subs:
+                            if subject.name != subject.generic_name:
+                                CU.warn(f"Dalykas '{subject.name}' automatiškai pervadintas į '{subject.generic_name}'")
+                            _cached_subs.append(subject.name)
 
         graphs = []
         for student in students:
