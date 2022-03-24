@@ -121,25 +121,55 @@ class Client:
         print(classes)
         return None
 
+    def generate_class_monthly_averages_report(
+        self,
+        group_id: str,
+    ) -> List[str]:
+
+        def get_first_date(date: datetime.datetime):
+            return datetime.datetime(date.year, date.month, 1)
+
+        def get_last_date(date: datetime.datetime):
+            return datetime.datetime(date.year, date.month, date.day)
+
+        current_date = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        dates = [(get_first_date(current_date), get_last_date(current_date))]
+        analysed_date = current_date
+        while analysed_date.month != 9:
+            analysed_date = analysed_date.replace(day=1) - datetime.timedelta(days=1)
+            dates.append((get_first_date(analysed_date), get_last_date(analysed_date)))
+
+        paths = []
+        for date in dates:
+            paths.append(self.generate_class_averages_report(group_id, date[0], date[1]))
+        return paths
+
     def generate_class_averages_report(
         self,
-        group_id: int,
+        group_id: str,
         term_start: datetime.datetime,
-        term_end: datetime.datetime,
-        file_path: str = None
-    ) -> None:
+        term_end: datetime.datetime
+    ) -> str:
+        date_from = term_start.strftime("%Y-%m-%d")
+        date_to = term_end.strftime("%Y-%m-%d")
         req_dict = {
             "ReportNormal": "12", # Generate averages report
-            "ClassNormal": str(group_id),
+            "ClassNormal": group_id,
             "PupilNormal": "0", # Select all pupils
             "ShowCourseNormal": "0",
-            "DateFromNormal": term_start.strftime("%Y-%m-%d"),
-            "DateToNormal": term_end.strftime("%Y-%m-%d"),
+            "DateFromNormal": date_from,
+            "DateToNormal": date_to,
             "FileTypeNormal": "0",
             "submitNormal": ""
         }
-        req_dict["DateFromNormal"] = "2022-01-01"
+
+        file_name = f'{group_id}_{date_from}_{date_to}_{int(datetime.datetime.now(datetime.timezone.utc).timestamp())}.xls'
+        if not os.path.exists(".temp"):
+            os.mkdir(".temp")
+        file_path = os.path.join(".temp", file_name)
 
         request = self.request("POST", self.BASE_URL + f"/1/lt/page/report/choose_normal/12/{group_id}", req_dict)
-        with open("failas.xls", "wb") as f:
+        with open(file_path, "wb") as f:
             f.write(request.content)
+        return file_path
