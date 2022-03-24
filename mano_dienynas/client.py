@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import os
 import requests
 
 from lxml import etree
@@ -29,9 +30,11 @@ class UserRole:
         return f'<UserRole title="{self.title}" classes="{self.classes}" school_name="{self.school_name}" is_active={self.is_active}>' # noqa
 
     def change_role(self) -> None:
+        """Changes current client role to this one."""
         self._client.request("GET", self._client.BASE_URL + self.url)
 
     def get_class_id(self) -> Optional[str]:
+        """Returns class ID as a string if user role is a class teacher."""
         if self.title != "Klasės vadovas":
             return None
         return self.url.split("/")[-1]
@@ -54,10 +57,25 @@ class Client:
         self.BASE_URL = base_url
         self.cookies = {}
 
+        self._session_expires = None
+        self._cached_roles = []
+
+    @property
+    def is_logged_in(self) -> bool:
+        if self._session_expires is None:
+            return False
+        # Consider session expired after 600 seconds
+        return datetime.datetime.now(datetime.timezone.utc).timestamp() - self._session_expires.timestamp() < 600
+
     def request(self, method: str, url: str, data: dict = None, no_cookies: bool = False) -> Response:
         if no_cookies:
             return requests.request(method, url, data=data, headers=self.HEADERS)
         return requests.request(method, url, data=data, headers=self.HEADERS, cookies=self.cookies)
+
+    def logout(self) -> None:
+        self.cookies = {}
+        self._cached_roles = []
+        self._session_expires = None
 
     def login(self, email: str, password: str) -> bool:
         """Attempts to login to manodienynas.lt platform.\n
@@ -71,6 +89,7 @@ class Client:
         if loginResponse.get('message') is not False:
             return False
 
+        self._session_expires = datetime.datetime.now(datetime.timezone.utc)
         self.cookies["PHPSESSID"] = request.cookies['PHPSESSID']
         self.cookies["PAS"] = request.cookies['pas']
         self.cookies["username"] = request.cookies['username']
@@ -85,6 +104,9 @@ class Client:
 
     def get_user_roles(self) -> List[UserRole]:
         """Returns a list of user role objects."""
+        if len(self._cached_roles) > 0:
+            return self._cached_roles
+
         r = self.request("GET", self.BASE_URL + "/1/lt/page/message_new/message_list")
         tree: _ElementTree = etree.parse(StringIO(r.text), PARSER)
 
@@ -103,6 +125,7 @@ class Client:
             roles.append(
                 UserRole(self, role_name, classes, school_name, url, 'current_role' in elem.attrib["class"])
             )
+        self._cached_roles = roles
         return roles
 
     def get_class_averages_report_options(self, class_id: str = None) -> Response:
