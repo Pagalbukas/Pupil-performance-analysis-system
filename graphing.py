@@ -290,7 +290,13 @@ class PupilSubjectAveragesGraph(BaseGraph):
         for subject_list in self.subject_lists:
             max_size = max(max_size, len(subject_list))
 
-        subjects: List[GraphValue] = [GraphValue(None, [None for _ in range(len(self.period_names))]) for _ in range(max_size)]
+        period_name_count = len(self.period_names)
+        subjects: List[GraphValue] = [
+            GraphValue(
+                None,
+                [None for _ in range(period_name_count)]
+            ) for _ in range(max_size)
+        ]
 
         for i, subject_list in enumerate(self.subject_lists):
             for j, subject in enumerate(subject_list):
