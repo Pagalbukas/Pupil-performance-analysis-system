@@ -74,6 +74,13 @@ class Client:
         self.cookies["username"] = request.cookies['username']
         return True
 
+    def get_filtered_user_roles(self) -> List[UserRole]:
+        roles = self.get_user_roles()
+        return [
+            r for r in roles
+            if r.title == "Klasės vadovas" or r.title == "Sistemos administratorius"
+        ]
+
     def get_user_roles(self) -> List[UserRole]:
         """Returns a list of user role objects."""
         r = self.request("GET", self.BASE_URL + "/1/lt/page/message_new/message_list")
