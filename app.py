@@ -4,14 +4,115 @@ import os
 import timeit
 import traceback
 
-from PyQt5.QtWidgets import QWidget, QFileDialog, QPushButton, QVBoxLayout, QDesktopWidget, QMessageBox, QListWidget, QStackedWidget, QLabel
+from PyQt5.QtWidgets import (
+    QVBoxLayout,
+    QMessageBox, QFileDialog,
+    QWidget, QDesktopWidget, QStackedWidget, QListWidget,
+    QLabel, QPushButton,
+    QLineEdit
+)
+from PyQt5.QtCore import QThread, QObject, pyqtSignal, pyqtSlot
 from typing import List
 
 from graphing import PupilSubjectMonthlyAveragesGraph, ClassPeriodAveragesGraph, ClassMonthlyAveragesGraph
+from mano_dienynas.client import Client
 from models import ClassSemesterReportSummary, ClassMonthlyReportSummary, Student
 from parsing import PupilSemesterReportParser, PupilMonthlyReportParser, ParsingError
 from utils import ConsoleUtils as CU
 from settings import Settings
+
+class LoginTaskWorker(QObject):
+    success = pyqtSignal()
+    error = pyqtSignal(str)
+
+    def __init__(self, app: App, username: str, password: str) -> None:
+        super().__init__()
+        self.app = app
+        self.username = username
+        self.password = password
+
+    @pyqtSlot()
+    def login(self):
+        if self.app.client.is_logged_in:
+            return self.error.emit("Vartotojas jau prisijungęs, pala, ką?")
+
+        logged_in = self.app.client.login(self.username, self.password)
+        if not logged_in:
+            return self.error.emit("Prisijungimas nepavyko, patikrinkite ar suvesti teisingi duomenys")
+
+        # Save the username since login was successful
+        self.app.settings.username = self.username
+        self.app.settings.save()
+
+        # Obtain filtered roles while at it and verify that user has the rights
+        roles = self.app.client.get_filtered_user_roles()
+        if len(roles) == 0:
+            self.app.client.logout()
+            return self.error.emit("Paskyra neturi reikiamų vartotojo teisių. Kol kas palaikomos tik paskyros su 'Klasės vadovas' ir 'Sistemos administratorius' tipais.")
+
+        # Figure out this
+        """
+        selected_role = [r for r in roles if r.classes is not None][0]
+        selected_role.change_role()
+
+        self.app.client.generate_class_monthly_averages_report(selected_role.get_class_id())
+        """
+
+        print("Prisijungimas pavyko")
+        self.success.emit()
+
+class MainWidget(QWidget):
+
+    def __init__(self, app: App) -> None:
+        super().__init__()
+        self.app = app
+
+        layout = QVBoxLayout()
+        agg_sem_button = QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
+        pup_mon_button = QPushButton('Mokinio dalykų vidurkių ataskaita pagal laikotarpį')
+        agg_mon_button = QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
+
+        agg_sem_button.clicked.connect(self.app.d_sem_agg)
+        pup_mon_button.clicked.connect(self.app.view_pupil_monthly)
+        agg_mon_button.clicked.connect(self.app.view_aggregated_monthly)
+
+        layout.addWidget(agg_sem_button)
+        layout.addWidget(pup_mon_button)
+        layout.addWidget(agg_mon_button)
+        self.setLayout(layout)
+
+class SelectGraphWidget(QWidget):
+
+    def __init__(self, app: App) -> None:
+        super().__init__()
+        self.app = app
+
+        layout = QVBoxLayout()
+        self.label = QLabel("Pasirinkite kokiu būdų norite pateikti nagrinėjamus duomenis")
+        manual_button = QPushButton('Rankiniu būdų')
+        auto_button = QPushButton('Automatiškai iš \'Mano Dienynas\' sistemos')
+        back_button = QPushButton('Grįžti į pradžią')
+
+        def auto():
+            if self.app.client.is_logged_in:
+                print("Asking for select class widget, not yet implemented")
+                return self.app.change_stack(self.app.SELECT_CLASS_WIDGET)
+            self.app.login_widget.clear_fields()
+            self.app.login_widget.fill_fields()
+            self.app.change_stack(self.app.LOGIN_WIDGET)
+
+        manual_button.clicked.connect(self.app.determine_graph_type)
+        auto_button.clicked.connect(auto)
+        back_button.clicked.connect(self.app.go_to_back)
+
+        layout.addWidget(self.label)
+        layout.addWidget(manual_button)
+        layout.addWidget(auto_button)
+        layout.addWidget(back_button)
+        self.setLayout(layout)
+
+    def set_text(self, text: str) -> str:
+        self.label.setText(text)
 
 class PupilSelectionWidget(QWidget):
 
@@ -23,10 +124,7 @@ class PupilSelectionWidget(QWidget):
         layout.addWidget(QLabel("Pasirinkite kurį mokinį norite nagrinėti"))
         self.subject_button = QPushButton('Dalykų vidurkiai')
         self.aggregated_button = QPushButton('Bendras vidurkis')
-        back_button = QPushButton('Atgal į startą')
-
-        # Disable both buttons by default
-        self.disable_buttons()
+        back_button = QPushButton('Grįžti į pradžią')
 
         # Create a list of student names
         self.name_list = QListWidget()
@@ -72,17 +170,103 @@ class PupilSelectionWidget(QWidget):
             self.name_list.insertItem(i, graph.title)
         self.disable_buttons()
 
+class LoginWidget(QWidget):
+
+    def __init__(self, app: App) -> None:
+        super().__init__()
+        self.app = app
+
+        layout = QVBoxLayout()
+        label = QLabel("Prisijungkite prie 'Mano Dienynas' sistemos")
+        self.username_field = QLineEdit()
+        self.username_field.setPlaceholderText("Jūsų el. paštas")
+        self.password_field = QLineEdit()
+        self.password_field.setPlaceholderText("Slaptažodis")
+        self.password_field.setEchoMode(QLineEdit.Password)
+        self.login_button = QPushButton('Prisijungti')
+        self.back_button = QPushButton('Grįžti į pradžią')
+
+        self.login_button.clicked.connect(self.login)
+        self.back_button.clicked.connect(self.app.go_to_back)
+
+        layout.addWidget(label)
+        layout.addWidget(self.username_field)
+        layout.addWidget(self.password_field)
+        layout.addWidget(self.login_button)
+        layout.addWidget(self.back_button)
+
+        self.setLayout(layout)
+
+    def fill_fields(self) -> None:
+        """Fills the input fields with default and saved values."""
+        self.username_field.setText(self.app.settings.username)
+
+    def clear_fields(self) -> None:
+        """Clears password and username fields."""
+        self.username_field.clear()
+        self.password_field.clear()
+
+    def enable_gui(self) -> None:
+        """Enables GUI components."""
+        self.username_field.setEnabled(True)
+        self.password_field.setEnabled(True)
+        self.login_button.setEnabled(True)
+        self.back_button.setEnabled(True)
+
+    def disable_gui(self) -> None:
+        """Disables GUI components."""
+        self.username_field.setEnabled(False)
+        self.password_field.setEnabled(False)
+        self.login_button.setEnabled(False)
+        self.login_button.clearFocus()
+        self.back_button.setEnabled(False)
+
+    def propagate_error(self, error_msg: str) -> None:
+        self.enable_gui()
+        self.app.show_error_box(error_msg)
+
+    def on_error_signal(self, error: str) -> None:
+        self.propagate_error(error)
+        self.login_thread.quit()
+
+    def on_success_signal(self) -> None:
+        print("SUCCESS LOGIN")
+        self.login_thread.quit()
+        self.app.change_stack(self.app.SELECT_CLASS_WIDGET)
+
+    def login(self) -> None:
+        username = self.username_field.text()
+        password = self.password_field.text()
+
+        if username.strip() == "" or password.strip() == "":
+            return self.propagate_error("Įveskite prisijungimo duomenis")
+
+        self.disable_gui()
+        self.login_worker = LoginTaskWorker(self.app, username, password)
+        self.login_thread = QThread()
+        self.login_worker.moveToThread(self.login_thread)
+
+        # Connect signals
+        self.login_worker.error.connect(self.on_error_signal)
+        self.login_worker.success.connect(self.on_success_signal)
+        self.login_thread.started.connect(self.login_worker.login)
+
+        self.login_thread.start()
+
 class App(QWidget):
 
     MAIN_WIDGET = 0
     SELECT_GRAPH_WIDGET = 1
     SELECT_PUPIL_WIDGET = 2
+    LOGIN_WIDGET = 3
+    SELECT_CLASS_WIDGET = 4
 
     def __init__(self, settings: Settings):
         super().__init__()
 
         self.settings = settings
         self.debug = settings.debugging
+        self.client = Client()
 
         self.view_aggregated = False
 
@@ -95,23 +279,18 @@ class App(QWidget):
 
         self.stack = QStackedWidget()
 
-        # Define generic catch-all button to returning to start
-        self.back_button = QPushButton('Atgal į startą')
-        self.back_button.clicked.connect(self.go_to_back)
-
         # Initialize QWidgets
-        self.main_widget = QWidget()
-        self.select_graph_widget = QWidget()
-        self._init_main_widget()
-        self._init_select_graph_widget()
+        self.main_widget = MainWidget(self)
+        self.select_graph_widget = SelectGraphWidget(self)
         self.select_pupil_widget = PupilSelectionWidget(self)
+        self.login_widget = LoginWidget(self)
 
         # Add said widgets to the StackedWidget
         self.stack.addWidget(self.main_widget)
         self.stack.addWidget(self.select_graph_widget)
         self.stack.addWidget(self.select_pupil_widget)
+        self.stack.addWidget(self.login_widget)
 
-        self.login_widget = QWidget()
         self.select_class_widget = QWidget()
         self.select_timeframe_widget = QWidget()
 
@@ -120,34 +299,6 @@ class App(QWidget):
         self.setLayout(main_layout)
 
         self.initUI()
-
-    def _init_main_widget(self):
-        layout = QVBoxLayout()
-        agg_sem_button = QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
-        pup_mon_button = QPushButton('Mokinio dalykų vidurkių ataskaita pagal laikotarpį')
-        agg_mon_button = QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
-
-        agg_sem_button.clicked.connect(self.d_sem_agg)
-        pup_mon_button.clicked.connect(self.view_pupil_monthly)
-        agg_mon_button.clicked.connect(self.view_aggregated_monthly)
-
-        layout.addWidget(agg_sem_button)
-        layout.addWidget(pup_mon_button)
-        layout.addWidget(agg_mon_button)
-        self.main_widget.setLayout(layout)
-
-    def _init_select_graph_widget(self):
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Pasirinkite kokiu būdų norite pateikti nagrinėjamus duomenis"))
-        manual_button = QPushButton('Rankiniu būdų')
-        auto_button = QPushButton('Automatiškai iš \'Mano Dienynas\' sistemos')
-        auto_button.setEnabled(False)
-
-        manual_button.clicked.connect(self.determine_graph_type)
-        layout.addWidget(manual_button)
-        layout.addWidget(auto_button)
-        layout.addWidget(self.back_button)
-        self.select_graph_widget.setLayout(layout)
 
     def go_to_back(self) -> None:
         self.view_aggregated = False
@@ -400,6 +551,7 @@ class App(QWidget):
             for s in student:
                 graph.add_subject_list(s.get_graphing_subjects())
             graphs.append(graph)
+        self.select_pupil_widget.disable_buttons()
         self.select_pupil_widget.populate_list(graphs)
         self.change_stack(self.SELECT_PUPIL_WIDGET)
 
