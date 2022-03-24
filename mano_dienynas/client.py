@@ -54,7 +54,9 @@ class Client:
         self.BASE_URL = base_url
         self.cookies = {}
 
-    def request(self, method: str, url: str, data: dict = None) -> Response:
+    def request(self, method: str, url: str, data: dict = None, no_cookies: bool = False) -> Response:
+        if no_cookies:
+            return requests.request(method, url, data=data, headers=self.HEADERS)
         return requests.request(method, url, data=data, headers=self.HEADERS, cookies=self.cookies)
 
     def login(self, email: str, password: str) -> bool:
@@ -64,7 +66,7 @@ class Client:
             'username': email,
             'password': password,
             'dienynas_remember_me': 1
-        })
+        }, no_cookies=True)
         loginResponse = request.json()
         if loginResponse.get('message') is not False:
             return False
