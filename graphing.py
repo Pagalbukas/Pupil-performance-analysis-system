@@ -1,4 +1,5 @@
 import matplotlib
+import os
 
 # Tell matplotlib to use Qt5Agg explicitly
 matplotlib.use('Qt5Agg')
@@ -8,8 +9,51 @@ import matplotlib.colors as colors # noqa: E402
 
 # For tweaking the default UI
 from matplotlib.backend_bases import PickEvent # noqa: E402
+from matplotlib.backends.qt_compat import QtWidgets, _getSaveFileName # noqa: E402
+from matplotlib.backends.backend_qt5 import NavigationToolbar2QT # noqa: E402
 from matplotlib.legend_handler import HandlerLine2D # noqa: E402
 from matplotlib.lines import Line2D # noqa: E402
+
+def save_figure(self, *args):
+    filetypes = {
+        'Joint Photographic Experts Group': ['jpeg', 'jpg'],
+        'Portable Document Format': ['pdf'],
+        'Portable Network Graphics': ['png']
+    }
+
+    sorted_filetypes = sorted(filetypes.items())
+    default_filetype = self.canvas.get_default_filetype()
+
+    startpath = os.path.expanduser(matplotlib.rcParams['savefig.directory'])
+    start = os.path.join(startpath, self.canvas.get_default_filename())
+    filters = []
+    selectedFilter = None
+    for name, exts in sorted_filetypes:
+        exts_list = " ".join(['*.%s' % ext for ext in exts])
+        filter = '%s (%s)' % (name, exts_list)
+        if default_filetype in exts:
+            selectedFilter = filter
+        filters.append(filter)
+    filters = ';;'.join(filters)
+
+    fname, filter = _getSaveFileName(
+        self.canvas.parent(), "Choose a filename to save to", start,
+        filters, selectedFilter)
+
+    if fname:
+        # Save dir for next time, unless empty str (i.e., use cwd).
+        if startpath != "":
+            matplotlib.rcParams['savefig.directory'] = (
+                os.path.dirname(fname))
+        try:
+            self.canvas.figure.savefig(fname)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(
+                self, "Error saving file", str(e),
+                QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.NoButton)
+
+
+NavigationToolbar2QT.save_figure = save_figure
 
 # Load the plot last for certain features to work
 import matplotlib.pyplot as plt # noqa: E402
