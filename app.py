@@ -16,11 +16,12 @@ from PySide6.QtGui import QScreen
 from PySide6.QtCore import QThread, QObject, Signal, Slot
 from typing import List
 
-from graphing import PupilSubjectMonthlyAveragesGraph, ClassPeriodAveragesGraph, ClassMonthlyAveragesGraph
+from graphing import ClassUnifiedAveragesGraph
 from mano_dienynas.client import Client
-from models import ClassSemesterReportSummary, ClassMonthlyReportSummary, Student
-from parsing import PupilSemesterReportParser, PupilMonthlyReportParser, ParsingError
+from models import UnifiedSubject, Mark, UnifiedPupilGrapher
+from parsing import PupilSemesterReportParser, PupilPeriodicReportParser, ParsingError
 from settings import Settings
+from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
 logger = logging.getLogger("analizatorius")
 logger.setLevel(logging.INFO)
@@ -60,7 +61,10 @@ class LoginTaskWorker(QObject):
         roles = self.app.client.get_filtered_user_roles()
         if len(roles) == 0:
             self.app.client.logout()
-            return self.error.emit("Paskyra neturi reikiamų vartotojo teisių. Kol kas palaikomos tik paskyros su 'Klasės vadovas' ir 'Sistemos administratorius' tipais.")
+            return self.error.emit(
+                "Paskyra neturi reikiamų vartotojo teisių. "
+                "Kol kas palaikomos tik paskyros su 'Klasės vadovas' ir 'Sistemos administratorius' tipais."
+            )
 
         # Figure out this
         """
@@ -81,16 +85,16 @@ class MainWidget(QWidget):
 
         layout = QVBoxLayout()
         agg_sem_button = QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
-        pup_mon_button = QPushButton('Mokinio dalykų vidurkių ataskaita pagal laikotarpį')
         agg_mon_button = QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
+        pup_mon_button = QPushButton('Individualizuota mokinio vidurkių ataskaita pagal laikotarpį')
 
-        agg_sem_button.clicked.connect(self.app.d_sem_agg)
-        pup_mon_button.clicked.connect(self.app.view_pupil_monthly)
-        agg_mon_button.clicked.connect(self.app.view_aggregated_monthly)
+        agg_sem_button.clicked.connect(self.app.view_aggregated_semester_graph)
+        agg_mon_button.clicked.connect(self.app.view_aggregated_monthly_selector)
+        pup_mon_button.clicked.connect(self.app.view_pupil_monthly_selector)
 
         layout.addWidget(agg_sem_button)
-        layout.addWidget(pup_mon_button)
         layout.addWidget(agg_mon_button)
+        layout.addWidget(pup_mon_button)
         self.setLayout(layout)
 
 class SelectGraphWidget(QWidget):
@@ -131,7 +135,8 @@ class PupilSelectionWidget(QWidget):
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
-        selected_graph = None
+        self.grapher: UnifiedPupilGrapher = None
+        self.selected_index: int = None
 
         layout = QVBoxLayout()
         label = QLabel("Pasirinkite kurį mokinį norite nagrinėti")
@@ -142,22 +147,18 @@ class PupilSelectionWidget(QWidget):
 
         def select_name() -> None:
             # Not best practise, but bash me all you want
-            nonlocal selected_graph
             indexes = self.name_list.selectedIndexes()
             if len(indexes) == 0:
                 return
             index = indexes[0].row()
             self.subject_button.setEnabled(True)
-            selected_graph = self.graphs[index]
-
-        def display_subject_graph() -> None:
-            if selected_graph is None:
-                return
-            selected_graph.display()
+            self.aggregated_button.setEnabled(True)
+            self.selected_index = index
 
         # Bind the events
         self.name_list.itemSelectionChanged.connect(select_name)
-        self.subject_button.clicked.connect(display_subject_graph)
+        self.subject_button.clicked.connect(self.display_subjects_graph)
+        self.aggregated_button.clicked.connect(self.display_aggregated_graph)
         back_button.clicked.connect(self.app.go_to_back)
 
         layout.addWidget(label)
@@ -172,13 +173,23 @@ class PupilSelectionWidget(QWidget):
         self.subject_button.setEnabled(False)
         self.aggregated_button.setEnabled(False)
 
-    def populate_list(self, graphs: List[PupilSubjectMonthlyAveragesGraph]) -> None:
-        """Populates the name list."""
-        self.graphs = graphs
+    def display_subjects_graph(self) -> None:
+        if self.selected_index is None:
+            return
+        self.grapher.display_subjects_graph(self.selected_index)
+
+    def display_aggregated_graph(self) -> None:
+        if self.selected_index is None:
+            return
+        self.grapher.display_aggregated_graph(self.selected_index)
+
+    def update_data(self, grapher: UnifiedPupilGrapher) -> None:
+        """Updates widget data.."""
+        self.grapher = grapher
         self.name_list.clearSelection()
         self.name_list.clear()
-        for i, graph in enumerate(graphs):
-            self.name_list.insertItem(i, graph.title)
+        for i, name in enumerate(self.grapher.pupil_names):
+            self.name_list.insertItem(i, name)
         self.disable_buttons()
 
 class LoginWidget(QWidget):
@@ -271,7 +282,7 @@ class LoginWidget(QWidget):
 class App(QWidget):
 
     MAIN_WIDGET = 0
-    SELECT_GRAPH_WIDGET = 1
+    SELECT_GRAPH_DATA_WIDGET = 1
     SELECT_PUPIL_WIDGET = 2
     LOGIN_WIDGET = 3
     SELECT_CLASS_WIDGET = 4
@@ -328,13 +339,13 @@ class App(QWidget):
         """Change current stack widget."""
         self.stack.setCurrentIndex(index)
 
-    def view_aggregated_monthly(self):
+    def view_aggregated_monthly_selector(self):
         self.view_aggregated = True
-        self.change_stack(self.SELECT_GRAPH_WIDGET)
+        self.change_stack(self.SELECT_GRAPH_DATA_WIDGET)
 
-    def view_pupil_monthly(self):
+    def view_pupil_monthly_selector(self):
         self.view_aggregated = False
-        self.change_stack(self.SELECT_GRAPH_WIDGET)
+        self.change_stack(self.SELECT_GRAPH_DATA_WIDGET)
 
     def determine_graph_type(self):
         filenames = self.ask_files_dialog()
@@ -348,8 +359,8 @@ class App(QWidget):
         # Sort summaries by term start, ascending (YYYY-MM-DD)
         summaries.sort(key=lambda s: (s.term_start))
         if self.view_aggregated:
-            return self.d_mon_agg(summaries)
-        self.d_mon_pup(summaries)
+            return self.display_aggregated_monthly_graph(summaries)
+        self.display_pupil_monthly_graph_selector(summaries)
 
     def initUI(self):
         self.setGeometry(self.left, self.top, self.width, self.height)
@@ -392,15 +403,15 @@ class App(QWidget):
             logger.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
         return summaries
 
-    def generate_monthly_summaries(self, files: List[str]) -> List[ClassMonthlyReportSummary]:
+    def generate_monthly_summaries(self, files: List[str]) -> List[ClassPeriodReportSummary]:
         """Generates a list of monthly summaries."""
-        summaries: List[ClassMonthlyReportSummary] = []
+        summaries: List[ClassPeriodReportSummary] = []
         for filename in files:
             start_time = timeit.default_timer()
             base_name = os.path.basename(filename)
 
             try:
-                parser = PupilMonthlyReportParser(filename)
+                parser = PupilPeriodicReportParser(filename)
                 summary = parser.create_summary(fetch_subjects=True)
                 parser.close()
             except ParsingError as e:
@@ -421,7 +432,7 @@ class App(QWidget):
             logger.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
         return summaries
 
-    def d_sem_agg(self):
+    def view_aggregated_semester_graph(self) -> None:
         files = self.ask_files_dialog()
         if len(files) == 0:
             return
@@ -434,28 +445,28 @@ class App(QWidget):
         # 1) term start (year)
         # 2) type (semester) (I -> II -> III)
         summaries.sort(key=lambda s: (s.term_start, s.type_as_int))
+        self.display_aggregated_semester_graph(summaries)
 
-        # Get the last (the most recent) statistical data and cache student names for later use
+    def display_aggregated_semester_graph(self, summaries: List[ClassSemesterReportSummary]) -> None:
         summary = summaries[-1]
         student_cache = [s.name for s in summary.students]
 
         # Go over each summary and use it to create graph points
-        graph = ClassPeriodAveragesGraph(summary.grade_name + " mokinių bendrų vidurkių pokytis", [s.representable_name for s in summaries])
+        graph = ClassUnifiedAveragesGraph(
+            summary.grade_name + " mokinių bendrų vidurkių pokytis",
+            [s.representable_name for s in summaries]
+        )
         for i, summary in enumerate(summaries):
             logger.info(f"Nagrinėjamas {summary.period_name} ({summary.term_start}-{summary.term_end})")
             for student in summary.students:
-
                 # If student name is not in cache, ignore them
                 if student.name not in student_cache:
                     logger.warn(f"Mokinys '{student.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
                     continue
-
                 graph.get_or_create_student(student.name)[i] = student.average
-
         graph.display(use_experimental_legend=True)
 
-    def d_mon_agg(self, summaries: List[ClassMonthlyReportSummary]):
-        # Get the last (the most recent) statistical data and cache student names for later use
+    def display_aggregated_monthly_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
         summary = summaries[-1]
         student_cache = [s.name for s in summary.students]
 
@@ -467,7 +478,7 @@ class App(QWidget):
             graph_title += f'{summaries[0].term_start.year} - {summary.term_start.year}'
 
         # Go over each summary and use it to create graph points
-        graph = ClassMonthlyAveragesGraph(graph_title, [s.yearless_representable_name for s in summaries])
+        graph = ClassUnifiedAveragesGraph(graph_title, [s.yearless_representable_name for s in summaries])
         for i, summary in enumerate(summaries):
             logger.info(f"Nagrinėjamas ({summary.term_start}-{summary.term_end})")
             for student in summary.students:
@@ -482,33 +493,31 @@ class App(QWidget):
         graph.display(use_experimental_legend=True)
         self.go_to_back()
 
-    def d_mon_pup(self, summaries: List[ClassMonthlyReportSummary]):
-
-        # Get the last (the most recent) statistical data and cache student names for later use
+    def display_pupil_monthly_graph_selector(self, summaries: List[ClassPeriodReportSummary]):
         summary = summaries[-1]
         student_cache = [s.name for s in summary.students]
-        students: List[List[Student]] = [[] for _ in range(len(summary.students))]
 
-        for summary in summaries:
+        grapher = UnifiedPupilGrapher([s.representable_name for s in summaries], student_cache)
+
+        for i, summary in enumerate(summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.representable_name}")
-            for j, student in enumerate(summary.students):
 
-                # If student name is not in cache, ignore them
+            for j, student in enumerate(summary.students):
                 if student.name not in student_cache:
                     logger.warn(f"Mokinys '{student.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
                     continue
 
-                students[j].append(student)
+                grapher.pupil_averages[j][i] = student.average
 
-        graphs = []
-        for student in students:
-            name = student[0].name
-            graph = PupilSubjectMonthlyAveragesGraph(name, [s.representable_name for s in summaries])
-            for s in student:
-                graph.add_subject_list(s.get_graphing_subjects())
-            graphs.append(graph)
+                for k, subject in enumerate(student.subjects):
+                    if not any(subject.name == d.name for d in grapher.pupil_subjects[j]):
+                        uni_sub = UnifiedSubject(subject.name)
+                        uni_sub.marks = [None] * len(grapher.period_names)
+                        grapher.pupil_subjects[j].append(uni_sub)
+                    grapher.pupil_subjects[j][k].marks[i] = Mark(subject.mark)
+
         self.select_pupil_widget.disable_buttons()
-        self.select_pupil_widget.populate_list(graphs)
+        self.select_pupil_widget.update_data(grapher)
         self.change_stack(self.SELECT_PUPIL_WIDGET)
 
     def show_error_box(self, message: str) -> None:

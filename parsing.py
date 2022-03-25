@@ -3,7 +3,8 @@ import datetime
 from typing import TYPE_CHECKING, List, Optional, Union
 
 from reading import SpreadsheetReader
-from models import Student, Subject, ClassSemesterReportSummary, ClassMonthlyReportSummary
+from models import Student, Subject
+from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
 class ParsingError(Exception):
 
@@ -159,7 +160,7 @@ class PupilSemesterReportParser(BaseParser):
             self.get_student_data(fetch_subjects)
         )
 
-class PupilMonthlyReportParser(BaseParser):
+class PupilPeriodicReportParser(BaseParser):
 
     def __init__(self, file_path: str) -> None:
         super().__init__(file_path)
@@ -232,7 +233,7 @@ class PupilMonthlyReportParser(BaseParser):
             return None
         return value
 
-    def create_summary(self, fetch_subjects: bool = True) -> ClassMonthlyReportSummary:
+    def create_summary(self, fetch_subjects: bool = True) -> ClassPeriodReportSummary:
         """Attempts to create a Summary object.
 
         May raise an exception."""
@@ -249,7 +250,7 @@ class PupilMonthlyReportParser(BaseParser):
                 " Įsitikinkite ar pusmetis/trimestras yra tikrai ir pilnai išvestas!"
             ))
 
-        return ClassMonthlyReportSummary(
+        return ClassPeriodReportSummary(
             self.get_grade_name(),
             (self.term_start, self.term_end),
             self.get_student_data(fetch_subjects)

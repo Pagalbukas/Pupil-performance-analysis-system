@@ -1,6 +1,5 @@
-import datetime
-
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Union
+from graphing import PupilSubjectPeriodicAveragesGraph, PupilPeriodicAveragesGraph
 
 class SubjectNames:
     """This class contains constants for subject names."""
@@ -52,13 +51,6 @@ COMMON_GENERIC_NAMES = {
     "kūno kultūra": SubjectNames.PE
 }
 
-ROMAN_VALUE_BINDINGS = {
-    "I": 9,
-    "II": 10,
-    "III": 11,
-    "IV": 12
-}
-
 class Subject:
 
     if TYPE_CHECKING:
@@ -72,17 +64,100 @@ class Subject:
         self.is_module = "modulis" in self.name
 
     def __repr__(self) -> str:
-        return f'<Subject name="{self.name}" is_number={self.is_number} mark={self.clean_mark}>'
+        return f'<Subject name="{self.name}" mark={self.mark}>'
 
     @property
-    def type(self) -> str:
-        """Returns stored mark type as string as either `str` or `int`."""
-        return "str" if isinstance(self.mark, str) else "int"
+    def is_ignored(self) -> bool:
+        """Returns true if subject's mark value should be ignored.
+
+        This is based on many factors, including subjects which are not
+        really subjects, per say."""
+        return (
+            # Informal education
+            self.name == "Neformalusis ugdymas"
+            or self.name == "Neformalus ugdymas"
+
+            # Moral related
+            or self.name.startswith("Dorinis ugdymas")
+
+            # Modules
+            or self.is_module
+
+            # Catch clauses for home schooling
+            # As observed, the data is transferred to the original subject
+            # marking too
+            or self.name.startswith("Namų ugdymas")
+            or self.name.startswith("Namų mokymas")
+
+            # No idea
+            or self.name == "Integruotas technologijų kursas"
+            or self.name == "Lietuvių kalbos rašyba, skyryba ir vartojimas (konsultacijos)"
+            or self.name == "Žmogaus sauga"
+            or self.name == "Karjeros ugdymas"
+
+            # Social work for which you get hours
+            or self.name == "Socialinė-pilietinė veikla"
+        )
+
+class Mark:
+
+    def __init__(self, raw_value: Optional[Union[int, float, str]]) -> None:
+        self.raw_value = raw_value
 
     @property
     def is_number(self) -> bool:
-        """Returns true if stored mark is a number."""
-        return not isinstance(self.mark, str)
+        """Returns true if mark is a number."""
+        return not isinstance(self.raw_value, str)
+
+    @property
+    def type(self) -> str:
+        """Returns mark type as string as either `str` or `int`."""
+        return "str" if not self.is_number else "int"
+
+    @property
+    def clean(self) -> Optional[Union[bool, int, float]]:
+        if self.raw_value is None:
+            return None
+
+        if isinstance(self.raw_value, (int, float)):
+            return self.raw_value
+
+        if self.raw_value == "-":
+            return None
+        if self.raw_value == "įsk":
+            return True
+        if self.raw_value == "nsk":
+            return False
+        if self.raw_value == "atl":
+            return None
+
+        if isinstance(self.raw_value, str):
+            new_mark = self.raw_value.replace("IN", "")
+            new_mark = new_mark.replace("PR", "")
+            if new_mark.isdecimal():
+                return int(new_mark)
+            elif new_mark.replace('.', '', 1).isdigit():
+                return float(new_mark)
+        raise ValueError(f"Could not convert '{self.raw_value}' to a clean mark")
+
+class UnifiedSubject:
+
+    if TYPE_CHECKING:
+        name: str
+        mark: Optional[Union[int, float, str]]
+        is_module: bool
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.marks: List[Mark] = []
+        self.is_module = "modulis" in self.name
+
+    def __repr__(self) -> str:
+        return f'<UnifiedSubject name="{self.name}" marks={len(self.marks)}>'
+
+    def add_mark(self, mark: Mark) -> None:
+        """Adds a mark to the list."""
+        self.marks.append(mark)
 
     @property
     def is_ignored(self) -> bool:
@@ -147,31 +222,38 @@ class Subject:
 
         return genericized_name
 
-    @property
-    def clean_mark(self) -> Optional[Union[bool, int, float]]:
-        if self.mark is None:
-            return None
+class UnifiedPupilGrapher:
 
-        if isinstance(self.mark, (int, float)):
-            return self.mark
+    def __init__(self, period_names: List[str], pupil_names: List[str]) -> None:
+        self.period_names: List[str] = period_names
+        self.pupil_names: List[str] = pupil_names
+        period_cnt = len(self.period_names)
+        pupil_cnt = len(self.pupil_names)
+        self.pupil_subjects: List[List[UnifiedSubject]] = [[] for _ in range(pupil_cnt)]
+        self.pupil_averages: List[List[Mark]] = [[None for _ in range(period_cnt)] for _ in range(pupil_cnt)]
 
-        if self.mark == "-":
-            return None
-        if self.mark == "įsk":
-            return True
-        if self.mark == "nsk":
-            return False
-        if self.mark == "atl":
-            return None
+    def display_subjects_graph(self, student_index: int) -> None:
+        name = self.pupil_names[student_index]
+        graph = PupilSubjectPeriodicAveragesGraph(name, self.period_names, self.pupil_subjects[student_index])
+        graph.display(use_experimental_legend=True)
 
-        if isinstance(self.mark, str):
-            new_mark = self.mark.replace("IN", "")
-            new_mark = new_mark.replace("PR", "")
-            if new_mark.isdecimal():
-                return int(new_mark)
-            elif new_mark.replace('.', '', 1).isdigit():
-                return float(new_mark)
-        raise ValueError(f"Could not convert '{self.mark}' to a clean mark")
+    def display_aggregated_graph(self, student_index: int) -> None:
+        name = self.pupil_names[student_index]
+        graph = PupilPeriodicAveragesGraph(
+            name,
+            self.period_names,
+            self.pupil_averages[student_index],
+            self.compute_class_averages(),
+            False
+        )
+        graph.display(use_experimental_legend=True)
+
+    def compute_class_averages(self) -> List[Optional[float]]:
+        averages = [0 for _ in range(len(self.period_names))]
+        for pupil in self.pupil_averages:
+            for i, average in enumerate(pupil):
+                averages[i] += average
+        return [round(a / len(self.pupil_names), 2) for a in averages]
 
 class Student:
 
@@ -200,99 +282,3 @@ class Student:
             s for s in self.subjects
             if not s.is_ignored # If subject is not ignored
         ]
-
-class ClassMonthlyReportSummary:
-
-    def __init__(
-        self,
-        grade_name: str,
-        sum_period: Tuple[datetime.datetime, datetime.datetime],
-        students: List[Student]
-    ) -> None:
-        self.grade_name = grade_name
-        # For grades which are not gymnasium ones
-        if grade_name.isdigit():
-            self.grade_name = grade_name + " klasė"
-        self.term_start, self.term_end = sum_period
-        self.students = students
-
-    def __repr__(self) -> str:
-        return f'<ClassMonthlyReportSummary period="{self.term_start}-{self.term_end}" students={len(self.students)}>'
-
-    @property
-    def grade_name_as_int(self) -> int:
-        """Returns grade name representation as an integer."""
-        value = self.grade_name.split(" ")[0]
-        try:
-            return int(value)
-        except ValueError:
-            return ROMAN_VALUE_BINDINGS.get(value, -1)
-
-    @property
-    def representable_name(self) -> str:
-        """Returns a human representable name of the summary."""
-        return f'{self.term_start.strftime("%Y-%m-%d")} - {self.term_end.strftime("%Y-%m-%d")}'
-
-    @property
-    def yearless_representable_name(self) -> str:
-        """Returns a human representable name of the summary without the year."""
-        return f'{self.term_start.strftime("%m-%d")} - {self.term_end.strftime("%m-%d")}'
-
-
-class ClassSemesterReportSummary:
-
-    def __init__(
-        self,
-        grade_name: str,
-        sum_type: str, sum_period: Tuple[int, int],
-        students: List[Student]
-    ) -> None:
-        self.grade_name = grade_name
-        # For grades which are not gymnasium ones
-        if grade_name.isdigit():
-            self.grade_name = grade_name + " klasė"
-        self.type = sum_type
-        self.term_start, self.term_end = sum_period
-        self.students = students
-
-    def __repr__(self) -> str:
-        return f'<ClassSemesterReportSummary type="{self.type}" period="{self.term_start}-{self.term_end}" students={len(self.students)}>'
-
-    @property
-    def type_as_int(self) -> int:
-        """Returns type representation as an integer.
-
-        I semester -> 1, II semester -> 2, ...
-
-        Returns -1 for the yearly type.
-        """
-        if self.type == "metinis":
-            return -1
-        numeric_val = 0
-        roman_number = self.type.split(" ")[0]
-        for _ in roman_number:
-            numeric_val += 1 # Assuming there's no 4th semester
-        return numeric_val
-
-    @property
-    def grade_name_as_int(self) -> int:
-        """Returns grade name representation as an integer."""
-        value = self.grade_name.split(" ")[0]
-        try:
-            return int(value)
-        except ValueError:
-            return ROMAN_VALUE_BINDINGS.get(value, -1)
-
-    @property
-    def period_name(self) -> str:
-        """Returns period name based on the grade."""
-        name = self.type
-        if self.grade_name_as_int < 11:
-            return name + " trimestras" # TODO: not future proof, investigate later
-        return name
-
-    @property
-    def representable_name(self) -> str:
-        """Returns a human representable name of the summary."""
-        period = f'{self.term_start}-{self.term_end}'
-        return f"{self.grade_name_as_int} kl.\n{self.period_name}\n({period})"

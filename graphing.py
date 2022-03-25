@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import matplotlib
 import os
 
@@ -14,6 +16,10 @@ from matplotlib.backends.qt_compat import QtWidgets, _getSaveFileName # type: ig
 from matplotlib.backends.backend_qt import NavigationToolbar2QT # type: ignore # noqa: E402
 from matplotlib.legend_handler import HandlerLine2D # noqa: E402
 from matplotlib.lines import Line2D # noqa: E402
+from typing import TYPE_CHECKING # noqa: E402
+
+if TYPE_CHECKING:
+    from models import UnifiedSubject # noqa: E402
 
 # Modify default save figure to have more fine-grained control over available file formats
 def save_figure(self, *args):
@@ -61,7 +67,7 @@ NavigationToolbar2QT.save_figure = save_figure
 import matplotlib.pyplot as plt # noqa: E402
 
 from random import choice, shuffle # noqa: E402
-from typing import Any, List, Optional, Tuple # noqa: E402
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple # noqa: E402
 
 class GraphValue:
 
@@ -209,7 +215,13 @@ class BaseGraph:
 
 class ClassAveragesGraph(BaseGraph):
 
-    def __init__(self, title: str, period_names: List[str], anonymize_names: bool = False, perform_rounding: bool = False) -> None:
+    def __init__(
+        self,
+        title: str,
+        period_names: List[str],
+        anonymize_names: bool = False,
+        perform_rounding: bool = False
+    ) -> None:
         super().__init__(title)
         self.period_names = period_names
         self.students = {}
@@ -219,12 +231,7 @@ class ClassAveragesGraph(BaseGraph):
     def get_or_create_student(self, student_name: str) -> Optional[float]:
         """Creates or gets a student entry in the dictionary and returns the reference."""
         if self.students.get(student_name) is None:
-            self.create_student(student_name)
-        return self.get_student(student_name)
-
-    def create_student(self, student_name: str) -> Optional[float]:
-        """Creates a student entry in the dictionary and returns the reference."""
-        self.students[student_name] = [None] * len(self.period_names)
+            self.students[student_name] = [None] * len(self.period_names)
         return self.get_student(student_name)
 
     def get_student(self, student_name: str) -> Optional[float]:
@@ -265,14 +272,15 @@ class ClassAveragesGraph(BaseGraph):
         return (self.period_names, self.get_graph_values())
 
 
-class ClassPeriodAveragesGraph(ClassAveragesGraph):
+class ClassUnifiedAveragesGraph(ClassAveragesGraph):
 
-    def __init__(self, title: str, period_names: List[str], anonymize_names: bool = False, perform_rounding: bool = False) -> None:
-        super().__init__(title, period_names, anonymize_names, perform_rounding)
-
-class ClassMonthlyAveragesGraph(ClassAveragesGraph):
-
-    def __init__(self, title: str, period_names: List[str], anonymize_names: bool = False, perform_rounding: bool = False) -> None:
+    def __init__(
+        self,
+        title: str,
+        period_names: List[str],
+        anonymize_names: bool = False,
+        perform_rounding: bool = False
+    ) -> None:
         super().__init__(title, period_names, anonymize_names, perform_rounding)
 
 class PupilAveragesGraph(BaseGraph):
@@ -280,41 +288,58 @@ class PupilAveragesGraph(BaseGraph):
     def __init__(self, title: str, period_names: List[str], perform_rounding: bool = False) -> None:
         super().__init__(title)
         self.period_names = period_names
-        self.students = {}
-        self.subject_lists: List[list] = []
         self.perform_rounding = perform_rounding
 
-    def add_subject_list(self, subjects):
-        self.subject_lists.append(subjects)
-
     def get_graph_values(self) -> List[GraphValue]:
-        max_size = -1
-        for subject_list in self.subject_lists:
-            max_size = max(max_size, len(subject_list))
-
-        period_name_count = len(self.period_names)
-        subjects: List[GraphValue] = [
-            GraphValue(
-                None,
-                [None for _ in range(period_name_count)]
-            ) for _ in range(max_size)
-        ]
-
-        for i, subject_list in enumerate(self.subject_lists):
-            for j, subject in enumerate(subject_list):
-                subjects[j].label = subject.generic_name
-                subjects[j].values[i] = subject.clean_mark
-
-        new_arr = []
-        for i, subject in enumerate(subjects.copy()):
-            if not subject.values == [None] * len(subject.values):
-                new_arr.append(subject)
-        return new_arr
+        raise NotImplementedError
 
     def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
         return (self.period_names, self.get_graph_values())
 
-class PupilSubjectMonthlyAveragesGraph(PupilAveragesGraph):
+class PupilPeriodicAveragesGraph(PupilAveragesGraph):
+    """This class implements pupil periodic averages graph.
 
-    def __init__(self, title: str, period_names: List[str], perform_rounding: bool = False) -> None:
+    Can also compare to the class average.
+    """
+
+    def __init__(
+        self,
+        title: str,
+        period_names: List[str],
+        pupil_averages: List[Optional[float]], class_averages: List[Optional[float]],
+        graph_class: bool = True,
+        perform_rounding: bool = False
+    ) -> None:
         super().__init__(title, period_names, perform_rounding)
+        self.pupil_averages = pupil_averages
+        self.class_averages = class_averages
+        self.graph_class = graph_class
+
+    def get_graph_values(self) -> List[GraphValue]:
+        """Returns a list of GraphValues which represent pupil averages."""
+        values = [GraphValue("Mokinio vidurkis", self.pupil_averages)]
+        if self.graph_class:
+            values.append(GraphValue("Klasės vidurkis", self.class_averages))
+        return values
+
+class PupilSubjectPeriodicAveragesGraph(PupilAveragesGraph):
+    """This class implements pupil subject periodic averages graph."""
+
+    def __init__(
+        self,
+        title: str,
+        period_names: List[str], subjects: List[UnifiedSubject],
+        perform_rounding: bool = False
+    ) -> None:
+        super().__init__(title, period_names, perform_rounding)
+        self.subjects = subjects
+
+    def get_graph_values(self) -> List[GraphValue]:
+        """Returns a list of GraphValues which are subjects which have at least a single mark."""
+        values = []
+        for subject in self.subjects:
+            marks = [m.clean for m in subject.marks]
+            if marks == [None] * len(subject.marks):
+                continue
+            values.append(GraphValue(subject.name, marks))
+        return values
