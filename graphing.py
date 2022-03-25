@@ -338,6 +338,8 @@ class PupilSubjectPeriodicAveragesGraph(PupilAveragesGraph):
         """Returns a list of GraphValues which are subjects which have at least a single mark."""
         values = []
         for subject in self.subjects:
+            if subject.is_ignored:
+                continue
             marks = [m.clean for m in subject.marks]
             if marks == [None] * len(subject.marks):
                 continue
