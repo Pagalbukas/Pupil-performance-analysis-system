@@ -9,8 +9,9 @@ import matplotlib.colors as colors # noqa: E402
 
 # For tweaking the default UI
 from matplotlib.backend_bases import PickEvent # noqa: E402
-from matplotlib.backends.qt_compat import QtWidgets, _getSaveFileName # noqa: E402
-from matplotlib.backends.backend_qt import NavigationToolbar2QT # noqa: E402
+# The modules exist, but for some reason, they are not picked up by Pylance
+from matplotlib.backends.qt_compat import QtWidgets, _getSaveFileName # type: ignore # noqa: E402
+from matplotlib.backends.backend_qt import NavigationToolbar2QT # type: ignore # noqa: E402
 from matplotlib.legend_handler import HandlerLine2D # noqa: E402
 from matplotlib.lines import Line2D # noqa: E402
 
@@ -274,7 +275,7 @@ class ClassMonthlyAveragesGraph(ClassAveragesGraph):
     def __init__(self, title: str, period_names: List[str], anonymize_names: bool = False, perform_rounding: bool = False) -> None:
         super().__init__(title, period_names, anonymize_names, perform_rounding)
 
-class PupilSubjectAveragesGraph(BaseGraph):
+class PupilAveragesGraph(BaseGraph):
 
     def __init__(self, title: str, period_names: List[str], perform_rounding: bool = False) -> None:
         super().__init__(title)
@@ -313,7 +314,7 @@ class PupilSubjectAveragesGraph(BaseGraph):
     def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
         return (self.period_names, self.get_graph_values())
 
-class PupilSubjectMonthlyAveragesGraph(PupilSubjectAveragesGraph):
+class PupilSubjectMonthlyAveragesGraph(PupilAveragesGraph):
 
     def __init__(self, title: str, period_names: List[str], perform_rounding: bool = False) -> None:
         super().__init__(title, period_names, perform_rounding)
