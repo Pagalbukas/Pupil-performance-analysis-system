@@ -1,6 +1,6 @@
 # This is a basic workflow that is manually triggered
 
-name: Compile
+name: Compile with Nuitka
 
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
@@ -32,7 +32,7 @@ jobs:
           python -m pip install -U nuitka
       - name: Build and compile the program
         run: |
-          python -m nuitka --assume-yes-for-downloads --windows-disable-console --enable-plugin=pyside6 --include-qt-plugins=all --enable-plugin=numpy --noinclude-scipy --include-module=matplotlib.backends.backend_pdf --include-module=matplotlib.backends.backend_qtagg --standalone main.py
+          python -m nuitka --assume-yes-for-downloads --windows-disable-console --enable-plugin=pyside6 --include-qt-plugins=sensible,styles --enable-plugin=numpy --noinclude-scipy --include-module=matplotlib.backends.backend_pdf --include-module=matplotlib.backends.backend_qtagg --standalone main.py
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
