@@ -1,5 +1,5 @@
 matplotlib==3.3.3
-pyqt5==5.15.2
+pyside6==6.2.4
 openpyxl==3.0.5
 xlrd==2.0.1
 requests==2.25.1

@@ -4,14 +4,16 @@ import os
 import timeit
 import logging
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
+    QApplication,
     QVBoxLayout,
     QMessageBox, QFileDialog,
-    QWidget, QDesktopWidget, QStackedWidget, QListWidget,
+    QWidget, QStackedWidget, QListWidget,
     QLabel, QPushButton,
     QLineEdit
 )
-from PyQt5.QtCore import QThread, QObject, pyqtSignal, pyqtSlot
+from PySide6.QtGui import QScreen
+from PySide6.QtCore import QThread, QObject, Signal, Slot
 from typing import List
 
 from graphing import PupilSubjectMonthlyAveragesGraph, ClassPeriodAveragesGraph, ClassMonthlyAveragesGraph
@@ -32,8 +34,8 @@ logger.addHandler(ch)
 
 
 class LoginTaskWorker(QObject):
-    success = pyqtSignal()
-    error = pyqtSignal(str)
+    success = Signal()
+    error = Signal(str)
 
     def __init__(self, app: App, username: str, password: str) -> None:
         super().__init__()
@@ -41,7 +43,7 @@ class LoginTaskWorker(QObject):
         self.username = username
         self.password = password
 
-    @pyqtSlot()
+    @Slot()
     def login(self):
         if self.app.client.is_logged_in:
             return self.error.emit("Vartotojas jau prisijungęs, pala, ką?")
@@ -351,10 +353,10 @@ class App(QWidget):
 
     def initUI(self):
         self.setGeometry(self.left, self.top, self.width, self.height)
-        qtRectangle = self.frameGeometry()
-        centerPoint = QDesktopWidget().availableGeometry().center()
-        qtRectangle.moveCenter(centerPoint)
-        self.move(qtRectangle.topLeft())
+        center = QScreen.availableGeometry(QApplication.primaryScreen()).center()
+        geo = self.frameGeometry()
+        geo.moveCenter(center)
+        self.move(geo.topLeft())
         self.show()
 
     def generate_semester_summaries(self, files: List[str]) -> List[ClassSemesterReportSummary]:
