@@ -32,7 +32,7 @@ jobs:
           python -m pip install -U pyinstaller
       - name: Build and compile the program
         run: |
-          python -m pyinstaller --windowed main.py
+          pyinstaller --windowed main.py
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
