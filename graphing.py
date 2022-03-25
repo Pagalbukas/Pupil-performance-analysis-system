@@ -1,8 +1,8 @@
 import matplotlib
 import os
 
-# Tell matplotlib to use Qt5Agg explicitly
-matplotlib.use('Qt5Agg')
+# Tell matplotlib to use QtAgg explicitly
+matplotlib.use('QtAgg')
 
 import matplotlib.cm as mplcm # noqa: E402
 import matplotlib.colors as colors # noqa: E402
@@ -10,10 +10,11 @@ import matplotlib.colors as colors # noqa: E402
 # For tweaking the default UI
 from matplotlib.backend_bases import PickEvent # noqa: E402
 from matplotlib.backends.qt_compat import QtWidgets, _getSaveFileName # noqa: E402
-from matplotlib.backends.backend_qt5 import NavigationToolbar2QT # noqa: E402
+from matplotlib.backends.backend_qt import NavigationToolbar2QT # noqa: E402
 from matplotlib.legend_handler import HandlerLine2D # noqa: E402
 from matplotlib.lines import Line2D # noqa: E402
 
+# Modify default save figure to have more fine-grained control over available file formats
 def save_figure(self, *args):
     filetypes = {
         'Joint Photographic Experts Group': ['jpeg', 'jpg'],
