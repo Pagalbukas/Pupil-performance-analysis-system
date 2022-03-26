@@ -33,11 +33,14 @@ class Settings:
     def _xor_bytes(self, data: bytes) -> bytes:
         return bytes(a ^ b for a, b in zip(data, cycle(b"tikrai-slapta")))
 
-    def _decrypt(self, file_path) -> bytes:
+    def _decrypt(self, file_path) -> dict:
         file = open(file_path, "rb")
         data = self._xor_bytes(file.read())
         file.close()
-        return json.loads(data)
+        try:
+            return json.loads(data)
+        except json.JSONDecodeError:
+            return {}
 
     def _encrypt(self, file_path) -> None:
         with open(file_path, "wb") as f:
