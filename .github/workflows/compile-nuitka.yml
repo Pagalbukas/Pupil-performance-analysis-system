@@ -26,8 +26,6 @@ jobs:
           --nofollow-import-to=PySide6.QtNetwork
           --include-module=matplotlib.backends.backend_pdf
           --include-module=matplotlib.backends.backend_qtagg
-          --windows-company-name=Pagalbukas
-          --windows-product-name=Analizatorius
           --standalone
           main.py
       - name: Upload artifact
