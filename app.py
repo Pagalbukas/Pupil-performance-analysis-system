@@ -28,10 +28,14 @@ logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter('[%(name)s:%(levelname)s]: %(message)s')
 
+fh = logging.FileHandler("log.log", encoding="utf-8")
+fh.setFormatter(formatter)
+fh.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 ch.setFormatter(formatter)
 logger.addHandler(ch)
+logger.addHandler(fh)
 
 
 class LoginTaskWorker(QObject):
@@ -296,6 +300,7 @@ class App(QWidget):
 
         if self.debug:
             logger.setLevel(logging.DEBUG)
+            fh.setLevel(logging.DEBUG)
             ch.setLevel(logging.DEBUG)
 
         self.view_aggregated = False
