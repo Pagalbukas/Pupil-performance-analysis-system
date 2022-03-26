@@ -19,7 +19,6 @@ jobs:
           python
           -m nuitka
           --assume-yes-for-downloads
-          --windows-disable-console
           --enable-plugin=pyside6
           --include-qt-plugins=sensible,styles
           --enable-plugin=numpy
