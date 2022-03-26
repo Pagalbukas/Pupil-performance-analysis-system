@@ -29,7 +29,6 @@ jobs:
           --windows-company-name=Pagalbukas
           --windows-product-name=Analizatorius
           --standalone
-          -o Analizatorius.exe
           main.py
       - name: Upload artifact
         uses: actions/upload-artifact@v3
