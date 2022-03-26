@@ -26,7 +26,7 @@ from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 logger = logging.getLogger("analizatorius")
 logger.setLevel(logging.INFO)
 
-formatter = logging.Formatter('[%(name)s:%(levelname)s]: %(message)s')
+formatter = logging.Formatter('[%(asctime)s %(name)s:%(levelname)s]: %(message)s', "%Y-%m-%d %H:%M:%S")
 
 fh = logging.FileHandler("log.log", encoding="utf-8")
 fh.setFormatter(formatter)
@@ -78,7 +78,6 @@ class LoginTaskWorker(QObject):
         self.app.client.generate_class_monthly_averages_report(selected_role.get_class_id())
         """
 
-        print("Prisijungimas pavyko")
         self.success.emit()
 
 class MainWidget(QWidget):
@@ -259,6 +258,7 @@ class LoginWidget(QWidget):
     def on_success_signal(self) -> None:
         """Callback of LoginTaskWorker thread on success."""
         self.login_thread.quit()
+        print("SUCCESS LOGIN")
         self.app.change_stack(self.app.SELECT_CLASS_WIDGET)
 
     def login(self) -> None:
@@ -302,6 +302,7 @@ class App(QWidget):
             logger.setLevel(logging.DEBUG)
             fh.setLevel(logging.DEBUG)
             ch.setLevel(logging.DEBUG)
+        logger.info("App instance initialised")
 
         self.view_aggregated = False
 
@@ -357,9 +358,9 @@ class App(QWidget):
         if len(filenames) == 0:
             return
 
-        summaries = self.generate_monthly_summaries(filenames)
+        summaries = self.generate_periodic_summaries(filenames)
         if len(summaries) == 0:
-            return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
+            return self.show_error_box("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
 
         # Sort summaries by term start, ascending (YYYY-MM-DD)
         summaries.sort(key=lambda s: (s.term_start))
@@ -406,10 +407,11 @@ class App(QWidget):
 
         if len(summaries) == 0:
             logger.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
+        logger.debug(f"Pusmečių/trimestrų suvestinės sugeneruotos: {len(summaries)}")
         return summaries
 
-    def generate_monthly_summaries(self, files: List[str]) -> List[ClassPeriodReportSummary]:
-        """Generates a list of monthly summaries."""
+    def generate_periodic_summaries(self, files: List[str]) -> List[ClassPeriodReportSummary]:
+        """Generates a list of periodic summaries."""
         summaries: List[ClassPeriodReportSummary] = []
         for filename in files:
             start_time = timeit.default_timer()
@@ -434,7 +436,8 @@ class App(QWidget):
             summaries.append(summary)
 
         if len(summaries) == 0:
-            logger.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
+            logger.error("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
+        logger.debug(f"Laikotarpių suvestinės sugeneruotos: {len(summaries)}")
         return summaries
 
     def view_aggregated_semester_graph(self) -> None:
@@ -442,9 +445,13 @@ class App(QWidget):
         if len(files) == 0:
             return
 
+        if self.debug:
+            for file in files:
+                logger.debug(f"File selected: {file}")
+
         summaries = self.generate_semester_summaries(files)
         if len(summaries) == 0:
-            return self.show_error_box("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
+            return self.show_error_box("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
 
         # Sort summaries by
         # 1) term start (year)
