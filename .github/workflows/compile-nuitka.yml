@@ -1,22 +1,6 @@
-# This is a basic workflow that is manually triggered
-
 name: Compile with Nuitka
+on: workflow_dispatch
 
-# Controls when the action will run. Workflow runs when manually triggered using the UI
-# or API.
-on:
-  workflow_dispatch:
-    # Inputs the workflow accepts.
-    inputs:
-      name:
-        # Friendly description to be shown in the UI instead of 'name'
-        description: 'Person to greet'
-        # Default value if no value is explicitly provided
-        default: 'World'
-        # Input has to be provided for the workflow to run
-        required: false
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
     runs-on: windows-latest
@@ -31,10 +15,25 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install -U nuitka
       - name: Build and compile the program
-        run: |
-          python -m nuitka --assume-yes-for-downloads --windows-disable-console --enable-plugin=pyside6 --include-qt-plugins=sensible,styles --enable-plugin=numpy --noinclude-scipy --include-module=matplotlib.backends.backend_pdf --include-module=matplotlib.backends.backend_qtagg --standalone main.py
+        run: >
+          python
+          -m nuitka
+          --assume-yes-for-downloads
+          --windows-disable-console
+          --enable-plugin=pyside6
+          --include-qt-plugins=sensible,styles
+          --enable-plugin=numpy
+          --noinclude-scipy
+          --nofollow-import-to=PySide6.QtNetwork
+          --include-module=matplotlib.backends.backend_pdf
+          --include-module=matplotlib.backends.backend_qtagg
+          --windows-company-name=Pagalbukas
+          --windows-product-name=Analizatorius
+          --standalone
+          -o Analizatorius.exe
+          main.py
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-            name: Stebesenos sistema
+            name: Analizatorius-Nuitka
             path: main.dist/
