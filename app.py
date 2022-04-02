@@ -432,6 +432,10 @@ class App(QWidget):
                 logger.warn(f"{base_name}: tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
                 continue
 
+            if any(s.average is None for s in summary.students):
+                logger.warn(f"{base_name}: bent vieno mokinio vidurkis yra ne-egzistuojantis, neskaitoma")
+                continue
+
             logger.debug(f"{base_name}: skaitymas užtruko {timeit.default_timer() - start_time}s")
             summaries.append(summary)
 
