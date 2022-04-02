@@ -47,7 +47,7 @@ class Settings:
             f.write(self._xor_bytes(str.encode(self._serialize())))
 
     def _create_dir(self) -> str:
-        file_dir = os.path.join(os.environ["APPDATA"], "Pagalbukas-statistika")
+        file_dir = os.path.join(os.environ["APPDATA"], "Pagalbukas-Analizatorius")
         if not os.path.exists(file_dir):
             os.mkdir(file_dir)
         return file_dir
