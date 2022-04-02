@@ -13,7 +13,6 @@ from typing import List, Optional
 PARSER = etree.HTMLParser()
 
 class UserRole:
-
     def __init__(self, client: Client, title: str, classes: Optional[str], school_name: str, url: str, is_active: bool) -> None: # noqa
         self._client = client
         self.title = title
@@ -29,6 +28,12 @@ class UserRole:
             return f'<UserRole title="{self.title}" classes=None school_name="{self.school_name}" is_active={self.is_active}>' # noqa
         return f'<UserRole title="{self.title}" classes="{self.classes}" school_name="{self.school_name}" is_active={self.is_active}>' # noqa
 
+    @property
+    def representable_name(self) -> str:
+        if self.classes:
+            return f'{self.school_name} {self.title} ({self.classes})'
+        return f'{self.school_name} {self.title}'
+
     def change_role(self) -> None:
         """Changes current client role to this one."""
         self._client.request("GET", self._client.BASE_URL + self.url)
@@ -40,7 +45,6 @@ class UserRole:
         return self.url.split("/")[-1]
 
 class Class:
-
     def __init__(self, class_id: str, name: str) -> None:
         self.id = class_id
         self.name = name
@@ -58,7 +62,7 @@ class Client:
         self.cookies = {}
 
         self._session_expires = None
-        self._cached_roles = []
+        self._cached_roles: List[UserRole] = []
 
     @property
     def is_logged_in(self) -> bool:
@@ -85,8 +89,8 @@ class Client:
             'password': password,
             'dienynas_remember_me': 1
         }, no_cookies=True)
-        loginResponse = request.json()
-        if loginResponse.get('message') is not False:
+        response = request.json()
+        if response.get('message') is not False:
             return False
 
         self._session_expires = datetime.datetime.now(datetime.timezone.utc)
@@ -179,7 +183,7 @@ class Client:
 
     def generate_class_averages_report(
         self,
-        group_id: str,
+        class_id: str,
         term_start: datetime.datetime,
         term_end: datetime.datetime
     ) -> str:
@@ -187,7 +191,7 @@ class Client:
         date_to = term_end.strftime("%Y-%m-%d")
         req_dict = {
             "ReportNormal": "12", # Generate averages report
-            "ClassNormal": group_id,
+            "ClassNormal": class_id,
             "PupilNormal": "0", # Select all pupils
             "ShowCourseNormal": "0",
             "DateFromNormal": date_from,
@@ -196,12 +200,24 @@ class Client:
             "submitNormal": ""
         }
 
-        file_name = f'{group_id}_{date_from}_{date_to}_{int(datetime.datetime.now(datetime.timezone.utc).timestamp())}.xls'
+        now = datetime.datetime.now(datetime.timezone.utc)
+
         if not os.path.exists(".temp"):
             os.mkdir(".temp")
+
+        for file in os.listdir(".temp"):
+            split = file.split("_")
+            f_class_id, period_start, period_end, time_generated = split
+            if f_class_id == class_id and period_start == date_from and period_end == date_to:
+                time_generated = int(time_generated.split(".")[0])
+                if now.timestamp() - 60 * 60 < time_generated:
+                    return os.path.join(".temp", file)
+                os.remove(os.path.join(".temp", file))
+
+        file_name = f'{class_id}_{date_from}_{date_to}_{int(now.timestamp())}.xls'
         file_path = os.path.join(".temp", file_name)
 
-        request = self.request("POST", self.BASE_URL + f"/1/lt/page/report/choose_normal/12/{group_id}", req_dict)
+        request = self.request("POST", self.BASE_URL + f"/1/lt/page/report/choose_normal/12/{class_id}", req_dict)
         with open(file_path, "wb") as f:
             f.write(request.content)
         return file_path
