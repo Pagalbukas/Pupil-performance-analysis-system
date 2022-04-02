@@ -137,8 +137,10 @@ class Mark:
         if isinstance(self.raw_value, str):
             new_mark = self.raw_value.replace("IN", "")
             new_mark = new_mark.replace("PR", "")
+            if new_mark == "0":
+                return None
             if new_mark.isdecimal():
-                return int(new_mark)
+                return float(new_mark)
             elif new_mark.replace('.', '', 1).isdigit():
                 return float(new_mark)
         raise ValueError(f"Could not convert '{self.raw_value}' to a clean mark")
