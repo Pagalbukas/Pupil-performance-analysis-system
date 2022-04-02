@@ -166,7 +166,9 @@ class PupilPeriodicReportParser(BaseParser):
         super().__init__(file_path)
         term_value = self.cell(7, 1).split(" - ")
         self.term_start = datetime.datetime.strptime(term_value[0], "%Y-%m-%d")
+        self.term_start = self.term_start.replace(tzinfo=datetime.timezone.utc)
         self.term_end = datetime.datetime.strptime(term_value[1], "%Y-%m-%d")
+        self.term_end = self.term_end.replace(tzinfo=datetime.timezone.utc)
 
         self._subject_name_cache = {}
 
