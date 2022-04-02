@@ -8,7 +8,7 @@ from lxml import etree
 from lxml.etree import _ElementTree, ElementBase
 from io import StringIO
 from requests.models import Response
-from typing import List, Optional
+from typing import List, Optional, Tuple, Union
 
 PARSER = etree.HTMLParser()
 
@@ -30,6 +30,7 @@ class UserRole:
 
     @property
     def representable_name(self) -> str:
+        """Returns clean, representable name of the role."""
         if self.classes:
             return f'{self.school_name} {self.title} ({self.classes})'
         return f'{self.school_name} {self.title}'
@@ -51,6 +52,61 @@ class Class:
 
     def __repr__(self) -> str:
         return f'<Class id="{self.id}" name="{self.name}">'
+
+class UnifiedAveragesReportGenerator:
+    def __init__(self, client: Client, class_id: str, dates: List[Tuple[datetime.datetime, datetime.datetime]]) -> None:
+        self._client = client
+        self.class_id = class_id
+        self.dates = dates
+        self.generated_count = 0
+
+    def __repr__(self) -> str:
+        return f'<UnifiedAveragesReportGenerator class_id="{self.class_id}">'
+
+    @property
+    def expected_period_report_count(self) -> int:
+        """Returns expected amount of periodic reports to be generated."""
+        now = datetime.datetime.now(datetime.timezone.utc)
+        return sum([1 for d in self.dates if d[0] <= now])
+
+    @property
+    def expected_monthly_report_count(self) -> int:
+        """Returns expected amount of monthly reports to be generated."""
+        now = datetime.datetime.now(datetime.timezone.utc)
+        count = 1
+        analysed_date = now
+        while analysed_date.month != 9:
+            analysed_date = analysed_date.replace(day=1) - datetime.timedelta(days=1)
+            count += 1
+        return count
+
+    def generate_periodic_reports(self):
+        """Returns a list of file paths to generated periodic reports."""
+        now = datetime.datetime.now(datetime.timezone.utc)
+        for date in self.dates:
+            if date[0] > now:
+                break
+            yield self._client.generate_class_averages_report(self.class_id, date[0], date[1])
+
+    def generate_monthly_reports(self) -> List[str]:
+        """Returns a list of file paths to generated periodic reports."""
+
+        def get_first_date(date: datetime.datetime):
+            return datetime.datetime(date.year, date.month, 1)
+
+        def get_last_date(date: datetime.datetime):
+            return datetime.datetime(date.year, date.month, date.day)
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+
+        dates = [(get_first_date(now), get_last_date(now))]
+        analysed_date = now
+        while analysed_date.month != 9:
+            analysed_date = analysed_date.replace(day=1) - datetime.timedelta(days=1)
+            dates.append((get_first_date(analysed_date), get_last_date(analysed_date)))
+
+        for date in dates:
+            yield self._client.generate_class_averages_report(self.class_id, date[0], date[1])
 
 class Client:
     HEADERS = {
@@ -77,6 +133,7 @@ class Client:
         return requests.request(method, url, data=data, headers=self.HEADERS, cookies=self.cookies)
 
     def logout(self) -> None:
+        """Destroys the client session and clears cache."""
         self.cookies = {}
         self._cached_roles = []
         self._session_expires = None
@@ -100,6 +157,7 @@ class Client:
         return True
 
     def get_filtered_user_roles(self) -> List[UserRole]:
+        """Returns a list of user roles capable of generating averages reports."""
         roles = self.get_user_roles()
         return [
             r for r in roles
@@ -132,7 +190,7 @@ class Client:
         self._cached_roles = roles
         return roles
 
-    def get_class_averages_report_options(self, class_id: str = None) -> Response:
+    def get_class_averages_report_options(self, class_id: str = None) -> Union[UnifiedAveragesReportGenerator, List[Class]]:
         """Returns response for selecting monthly averages report."""
         if class_id is None:
             r = self.request("GET", self.BASE_URL + "/1/lt/page/report/choose_normal/12")
@@ -142,44 +200,32 @@ class Client:
         tree: _ElementTree = etree.parse(StringIO(r.text), PARSER)
         form: ElementBase = tree.find("//form[@name='reportNormalForm']")
 
-        class_select_elem: ElementBase = form.find(".//select[@id='ClassNormal']")
-        date_quick_select_elems: List[ElementBase] = form.xpath(".//a[@class='termDateSetter whiteButton']")
+        # If class ID was specified, provide unified interface for downloading either monthly or semester
+        if class_id is not None:
+            date_quick_select_elems: List[ElementBase] = form.xpath(".//a[@class='termDateSetter whiteButton']")
+            if len(date_quick_select_elems) % 2 != 0:
+                raise RuntimeError("Neįmanoma automatiškai nustatyti trimestrų/pusmečių laikotarpių")
 
-        print(date_quick_select_elems)
+            half = len(date_quick_select_elems) // 2
+            dates = []
+            for e in date_quick_select_elems:
+                date = datetime.datetime.strptime(e.attrib["href"], "%Y-%m-%d")
+                dates.append(date.replace(tzinfo=datetime.timezone.utc))
+            new_dates = []
+            for i in range(half - 1):
+                new_dates.append((dates[:half][i], dates[half:][i]))
+            return UnifiedAveragesReportGenerator(self, class_id, new_dates)
 
+        # Otherwise, return a list of Class classes for selection
         classes = []
+        class_select_elem: ElementBase = form.find(".//select[@id='ClassNormal']")
         for opt in class_select_elem.getchildren():
             opt: ElementBase
             value = opt.attrib["value"]
             if value == "0":
                 continue
             classes.append(Class(value, opt.text.strip()))
-        print(classes)
-        return None
-
-    def generate_class_monthly_averages_report(
-        self,
-        group_id: str,
-    ) -> List[str]:
-
-        def get_first_date(date: datetime.datetime):
-            return datetime.datetime(date.year, date.month, 1)
-
-        def get_last_date(date: datetime.datetime):
-            return datetime.datetime(date.year, date.month, date.day)
-
-        current_date = datetime.datetime.now(tz=datetime.timezone.utc)
-
-        dates = [(get_first_date(current_date), get_last_date(current_date))]
-        analysed_date = current_date
-        while analysed_date.month != 9:
-            analysed_date = analysed_date.replace(day=1) - datetime.timedelta(days=1)
-            dates.append((get_first_date(analysed_date), get_last_date(analysed_date)))
-
-        paths = []
-        for date in dates:
-            paths.append(self.generate_class_averages_report(group_id, date[0], date[1]))
-        return paths
+        return classes
 
     def generate_class_averages_report(
         self,
@@ -187,6 +233,8 @@ class Client:
         term_start: datetime.datetime,
         term_end: datetime.datetime
     ) -> str:
+        """Generates averages report for specified class and period.
+        Returns a path to the generated file."""
         date_from = term_start.strftime("%Y-%m-%d")
         date_to = term_end.strftime("%Y-%m-%d")
         req_dict = {
@@ -205,6 +253,7 @@ class Client:
         if not os.path.exists(".temp"):
             os.mkdir(".temp")
 
+        # This handles cache
         for file in os.listdir(".temp"):
             split = file.split("_")
             f_class_id, period_start, period_end, time_generated = split
