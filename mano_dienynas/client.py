@@ -37,7 +37,13 @@ class UserRole:
 
     def change_role(self) -> None:
         """Changes current client role to this one."""
-        self._client.request("GET", self._client.BASE_URL + self.url)
+        if self.is_active:
+            return
+        r = self._client.request("GET", self._client.BASE_URL + self.url)
+        if r.status_code != 200:
+            raise RuntimeError("Keičiant paskyros tipą įvyko nenumatyta klaida")
+        for role in self._client._cached_roles:
+            role.is_active = role.url == self.url
 
     def get_class_id(self) -> Optional[str]:
         """Returns class ID as a string if user role is a class teacher."""
