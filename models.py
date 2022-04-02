@@ -271,14 +271,12 @@ class Student:
         return f'<Student name="{self.name}" average={self.average} subjects={len(self.subjects)}>'
 
     @property
+    def sorted_subjects(self) -> List[Subject]:
+        """Returns a sorted subject list by name."""
+        return sorted(self.subjects, key=lambda s: s.name)
+
+    @property
     def sane_name(self) -> str:
         """Returns a reversed name of the student.
         Should begin with a name instead of surname."""
         return ' '.join(self.name.split(" ")[::-1])
-
-    def get_graphing_subjects(self) -> List[Subject]:
-        """Returns a list of subjects which can be used in graphing (has mark values)."""
-        return [
-            s for s in self.subjects
-            if not s.is_ignored # If subject is not ignored
-        ]

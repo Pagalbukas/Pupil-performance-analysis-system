@@ -521,7 +521,7 @@ class App(QWidget):
 
                 grapher.pupil_averages[j][i] = student.average
 
-                for k, subject in enumerate(student.subjects):
+                for k, subject in enumerate(student.sorted_subjects):
                     if not any(subject.name == d.name for d in grapher.pupil_subjects[j]):
                         uni_sub = UnifiedSubject(subject.name)
                         uni_sub.marks = [None] * len(grapher.period_names)
