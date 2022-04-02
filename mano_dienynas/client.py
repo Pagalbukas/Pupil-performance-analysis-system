@@ -130,8 +130,12 @@ class Client:
     def is_logged_in(self) -> bool:
         if self._session_expires is None:
             return False
-        # Consider session expired after 600 seconds
-        return datetime.datetime.now(datetime.timezone.utc).timestamp() - self._session_expires.timestamp() < 600
+        # Consider session expired after 20 minutes
+        if datetime.datetime.now(datetime.timezone.utc).timestamp() - self._session_expires.timestamp() < 60 * 20:
+            return True
+        # Logout after session expiration
+        self.logout()
+        return False
 
     def request(self, method: str, url: str, data: dict = None, no_cookies: bool = False) -> Response:
         if no_cookies:
