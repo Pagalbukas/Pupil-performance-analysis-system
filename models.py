@@ -104,6 +104,9 @@ class Mark:
     def __init__(self, raw_value: Optional[Union[int, float, str]]) -> None:
         self.raw_value = raw_value
 
+    def __repr__(self) -> str:
+        return f'<Mark raw="{self.raw_value}">'
+
     @property
     def is_number(self) -> bool:
         """Returns true if mark is a number."""
