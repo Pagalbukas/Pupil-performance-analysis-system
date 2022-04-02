@@ -233,7 +233,7 @@ class UnifiedPupilGrapher:
         period_cnt = len(self.period_names)
         pupil_cnt = len(self.pupil_names)
         self.pupil_subjects: List[List[UnifiedSubject]] = [[] for _ in range(pupil_cnt)]
-        self.pupil_averages: List[List[Mark]] = [[None for _ in range(period_cnt)] for _ in range(pupil_cnt)]
+        self.pupil_averages: List[List[Optional[Union[int, float]]]] = [[None for _ in range(period_cnt)] for _ in range(pupil_cnt)]
 
     def display_subjects_graph(self, student_index: int) -> None:
         name = self.pupil_names[student_index]
