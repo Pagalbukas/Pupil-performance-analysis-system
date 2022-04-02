@@ -66,39 +66,6 @@ class Subject:
     def __repr__(self) -> str:
         return f'<Subject name="{self.name}" mark={self.mark}>'
 
-    @property
-    def is_ignored(self) -> bool:
-        """Returns true if subject's mark value should be ignored.
-
-        This is based on many factors, including subjects which are not
-        really subjects, per say."""
-        return (
-            # Informal education
-            self.name == "Neformalusis ugdymas"
-            or self.name == "Neformalus ugdymas"
-
-            # Moral related
-            or self.name.startswith("Dorinis ugdymas")
-
-            # Modules
-            or self.is_module
-
-            # Catch clauses for home schooling
-            # As observed, the data is transferred to the original subject
-            # marking too
-            or self.name.startswith("Namų ugdymas")
-            or self.name.startswith("Namų mokymas")
-
-            # No idea
-            or self.name == "Integruotas technologijų kursas"
-            or self.name == "Lietuvių kalbos rašyba, skyryba ir vartojimas (konsultacijos)"
-            or self.name == "Žmogaus sauga"
-            or self.name == "Karjeros ugdymas"
-
-            # Social work for which you get hours
-            or self.name == "Socialinė-pilietinė veikla"
-        )
-
 class Mark:
 
     def __init__(self, raw_value: Optional[Union[int, float, str]]) -> None:
@@ -236,7 +203,9 @@ class UnifiedPupilGrapher:
         period_cnt = len(self.period_names)
         pupil_cnt = len(self.pupil_names)
         self.pupil_subjects: List[List[UnifiedSubject]] = [[] for _ in range(pupil_cnt)]
-        self.pupil_averages: List[List[Optional[Union[int, float]]]] = [[None for _ in range(period_cnt)] for _ in range(pupil_cnt)]
+        self.pupil_averages: List[List[Optional[Union[int, float]]]] = [
+            [None for _ in range(period_cnt)] for _ in range(pupil_cnt)
+        ]
 
     def display_subjects_graph(self, student_index: int) -> None:
         name = self.pupil_names[student_index]
