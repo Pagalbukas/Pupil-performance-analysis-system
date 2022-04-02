@@ -195,6 +195,7 @@ class UnifiedSubject:
 
             # Social work for which you get hours
             or self.name == "Socialinė-pilietinė veikla"
+            or self.name == "Socialinė veikla"
         )
 
     @property
