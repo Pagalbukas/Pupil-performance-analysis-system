@@ -219,7 +219,7 @@ class UnifiedPupilGrapher:
             self.period_names,
             self.pupil_averages[student_index],
             self.compute_class_averages(),
-            False
+            True
         )
         graph.display(use_experimental_legend=True)
 
