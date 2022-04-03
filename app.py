@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import timeit
 import logging
 
@@ -564,6 +565,7 @@ class App(QWidget):
 
     def __init__(self, settings: Settings):
         super().__init__()
+        logger.info("App instance initialised")
 
         self.settings = settings
         self.debug = settings.debugging
@@ -573,7 +575,7 @@ class App(QWidget):
             logger.setLevel(logging.DEBUG)
             fh.setLevel(logging.DEBUG)
             ch.setLevel(logging.DEBUG)
-        logger.info("App instance initialised")
+            logger.debug(f"Loaded modules: {list(sys.modules.keys())}")
 
         self.view_aggregated = False
 
