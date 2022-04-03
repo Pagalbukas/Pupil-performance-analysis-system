@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QLineEdit
 )
 from PySide6.QtGui import QScreen
-from PySide6.QtCore import QThread, QObject, Signal, Slot
+from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
 from typing import List, Tuple
 
 from graphing import ClassUnifiedAveragesGraph
@@ -383,12 +383,12 @@ class SelectUserRoleWidget(QWidget):
         self.app.show_error_box(error_msg)
 
     def on_error_signal(self, error: str) -> None:
-        """Callback of LoginTaskWorker thread on error."""
+        """Callback of ChangeRoleWorker thread on error."""
         self.propagate_error(error)
         self.worker_thread.quit()
 
     def on_success_signal(self) -> None:
-        """Callback of LoginTaskWorker thread on success."""
+        """Callback of ChangeRoleWorker thread on success."""
         self.worker_thread.quit()
         self.enable_gui()
         self.app.select_class_widget.update_data()
@@ -453,6 +453,10 @@ class SelectClassWidget(QWidget):
         layout.addWidget(self.back_button)
         self.setLayout(layout)
 
+    def _create_progress_dialog(self):
+        self.progress_dialog = QProgressDialog("Generuojamos ataskaitos", None, 0, 0, self)
+        self.progress_dialog.setWindowFlags(Qt.Window | Qt.MSWindowsFixedSizeDialogHint | Qt.CustomizeWindowHint)
+
     def select_class(self) -> None:
         indexes = self.class_list.selectedIndexes()
         if len(indexes) == 0:
@@ -484,13 +488,13 @@ class SelectClassWidget(QWidget):
         self.app.show_error_box(error_msg)
 
     def on_error_signal(self, error: str) -> None:
-        """Callback of LoginTaskWorker thread on error."""
+        """Callback of GenerateReportWorker thread on error."""
         self.propagate_error(error)
         self.progress_dialog.hide()
         self.worker_thread.quit()
 
     def on_progress_signal(self, data: Tuple[int, int]) -> None:
-        """Callback of LoginTaskWorker thread on success."""
+        """Callback of GenerateReportWorker thread on success."""
         total, curr = data
         if not self.progress_dialog.isVisible():
             self.progress_dialog.show()
@@ -498,7 +502,7 @@ class SelectClassWidget(QWidget):
         self.progress_dialog.setValue(curr)
 
     def on_success_signal(self, file_paths: List[str]) -> None:
-        """Callback of LoginTaskWorker thread on success."""
+        """Callback of GenerateReportWorker thread on success."""
         self.progress_dialog.hide()
         self.worker_thread.quit()
         try:
@@ -532,7 +536,7 @@ class SelectClassWidget(QWidget):
         self.worker.success.connect(self.on_success_signal)
         self.worker.progress.connect(self.on_progress_signal)
         self.worker_thread.started.connect(self.worker.generate_periodic)
-        self.progress_dialog = QProgressDialog("Generuojama", None, 0, 0, self)
+        self._create_progress_dialog()
         self.worker_thread.start()
 
     def generate_monthly_reports(self) -> None:
@@ -545,7 +549,7 @@ class SelectClassWidget(QWidget):
         self.worker.success.connect(self.on_success_signal)
         self.worker.progress.connect(self.on_progress_signal)
         self.worker_thread.started.connect(self.worker.generate_monthly)
-        self.progress_dialog = QProgressDialog("Generuojama", None, 0, 0, self)
+        self._create_progress_dialog()
         self.worker_thread.start()
 
 
