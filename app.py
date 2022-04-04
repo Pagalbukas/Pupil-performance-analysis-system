@@ -465,6 +465,7 @@ class SelectClassWidget(QWidget):
     def _create_progress_dialog(self):
         self.progress_dialog = QProgressDialog("Generuojamos ataskaitos", None, 0, 0, self)
         self.progress_dialog.setWindowFlags(Qt.Window | Qt.MSWindowsFixedSizeDialogHint | Qt.CustomizeWindowHint)
+        self.progress_dialog.setModal(True)
 
     def select_class(self) -> None:
         indexes = self.class_list.selectedIndexes()
