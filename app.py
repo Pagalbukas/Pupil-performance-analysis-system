@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QLabel, QPushButton,
     QLineEdit
 )
-from PySide6.QtGui import QScreen
+from PySide6.QtGui import QScreen, QKeyEvent
 from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
 from typing import List, Tuple
 
@@ -273,6 +273,14 @@ class LoginWidget(QWidget):
         layout.addWidget(self.login_button)
         layout.addWidget(self.back_button)
         self.setLayout(layout)
+
+    def keyPressEvent(self, key_event: QKeyEvent) -> None:
+        """Intercepts enter key event and calls login function."""
+        if key_event.key() == Qt.Key_Return:
+            if self.login_button.isEnabled():
+                self.login()
+        else:
+            super().keyPressEvent(key_event)
 
     def fill_fields(self) -> None:
         """Fills the input fields with default and saved values."""
