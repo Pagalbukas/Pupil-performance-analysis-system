@@ -209,13 +209,13 @@ class UnifiedPupilGrapher:
 
     def display_subjects_graph(self, student_index: int) -> None:
         name = self.pupil_names[student_index]
-        graph = PupilSubjectPeriodicAveragesGraph(name, self.period_names, self.pupil_subjects[student_index])
+        graph = PupilSubjectPeriodicAveragesGraph(f"{name} dalykų vidurkiai", self.period_names, self.pupil_subjects[student_index])
         graph.display(use_experimental_legend=True)
 
     def display_aggregated_graph(self, student_index: int) -> None:
         name = self.pupil_names[student_index]
         graph = PupilPeriodicAveragesGraph(
-            name,
+            f"{name} bendras vidurkis",
             self.period_names,
             self.pupil_averages[student_index],
             self.compute_class_averages(),

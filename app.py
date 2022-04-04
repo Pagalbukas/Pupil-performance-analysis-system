@@ -743,7 +743,7 @@ class App(QWidget):
 
         # Go over each summary and use it to create graph points
         graph = ClassUnifiedAveragesGraph(
-            summary.grade_name + " mokinių bendrų vidurkių pokytis",
+            summary.grade_name + " mokinių bendri vidurkiai",
             [s.representable_name for s in summaries]
         )
         for i, summary in enumerate(summaries):
@@ -761,7 +761,7 @@ class App(QWidget):
         student_cache = [s.name for s in summary.students]
 
         # Determine graph title
-        graph_title = summary.grade_name + " mokinių mėnėsiniai vidurkiai\n"
+        graph_title = summary.grade_name + " mokinių bendri vidurkiai\n"
         if summaries[0].term_start.year == summary.term_start.year:
             graph_title += str(summary.term_start.year)
         else:
