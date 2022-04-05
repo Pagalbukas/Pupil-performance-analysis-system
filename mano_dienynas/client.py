@@ -10,6 +10,8 @@ from io import StringIO
 from requests.models import Response
 from typing import List, Optional, Tuple, Union
 
+from files import get_temp_dir
+
 PARSER = etree.HTMLParser()
 
 class UserRole:
@@ -259,22 +261,28 @@ class Client:
         }
 
         now = datetime.datetime.now(datetime.timezone.utc)
-
-        if not os.path.exists(".temp"):
-            os.mkdir(".temp")
+        timestamp = now.timestamp()
 
         # This handles cache
-        for file in os.listdir(".temp"):
+        for file in os.listdir(get_temp_dir()):
+            file_path = os.path.join(get_temp_dir(), file)
+
+            # Remove files which are a week old based on filesystem reporting
+            if timestamp - 60 * 60 * 24 * 7 > os.path.getmtime(file_path):
+                os.remove(file_path)
+                continue
+            
+            # Handle still potentially cached files
             split = file.split("_")
             f_class_id, period_start, period_end, time_generated = split
             if f_class_id == class_id and period_start == date_from and period_end == date_to:
                 time_generated = int(time_generated.split(".")[0])
-                if now.timestamp() - 60 * 60 < time_generated:
-                    return os.path.join(".temp", file)
-                os.remove(os.path.join(".temp", file))
+                if timestamp - 60 * 60 < time_generated:
+                    return file_path
+                os.remove(file_path)
 
-        file_name = f'{class_id}_{date_from}_{date_to}_{int(now.timestamp())}.xls'
-        file_path = os.path.join(".temp", file_name)
+        file_name = f'{class_id}_{date_from}_{date_to}_{int(timestamp)}.xls'
+        file_path = os.path.join(get_temp_dir(), file_name)
 
         request = self.request("POST", self.BASE_URL + f"/1/lt/page/report/choose_normal/12/{class_id}", req_dict)
         with open(file_path, "wb") as f:

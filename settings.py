@@ -4,6 +4,8 @@ import os
 from itertools import cycle
 from typing import TYPE_CHECKING, Optional
 
+from files import get_data_dir
+
 class Settings:
 
     if TYPE_CHECKING:
@@ -46,19 +48,13 @@ class Settings:
         with open(file_path, "wb") as f:
             f.write(self._xor_bytes(str.encode(self._serialize())))
 
-    def _create_dir(self) -> str:
-        file_dir = os.path.join(os.environ["APPDATA"], "Pagalbukas-Analizatorius")
-        if not os.path.exists(file_dir):
-            os.mkdir(file_dir)
-        return file_dir
-
     def load(self):
         data = {}
-        settings_file = os.path.join(self._create_dir(), "settings")
+        settings_file = os.path.join(get_data_dir(), "settings")
         if os.path.exists(settings_file):
             data = self._decrypt(settings_file)
         self._load_params(data)
 
     def save(self):
-        settings_file = os.path.join(self._create_dir(), "settings")
+        settings_file = os.path.join(get_data_dir(), "settings")
         self._encrypt(settings_file)

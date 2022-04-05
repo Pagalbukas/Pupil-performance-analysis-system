@@ -17,6 +17,7 @@ from PySide6.QtGui import QScreen, QKeyEvent
 from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
 from typing import List, Tuple
 
+from files import get_log_file
 from graphing import ClassUnifiedAveragesGraph
 from mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class
 from models import UnifiedSubject, Mark, UnifiedPupilGrapher
@@ -29,7 +30,7 @@ logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter('[%(asctime)s %(name)s:%(levelname)s]: %(message)s', "%Y-%m-%d %H:%M:%S")
 
-fh = logging.FileHandler("log.log", encoding="utf-8")
+fh = logging.FileHandler(get_log_file(), encoding="utf-8")
 fh.setFormatter(formatter)
 fh.setLevel(logging.INFO)
 ch = logging.StreamHandler()
