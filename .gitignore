@@ -2,4 +2,6 @@ __pycache__
 main.dist
 main.build
 .temp
-log.log
+dist
+build/main
+*.exe
