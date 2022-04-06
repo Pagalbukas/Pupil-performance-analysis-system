@@ -7,17 +7,17 @@ import logging
 
 from PySide6.QtWidgets import (
     QApplication,
-    QVBoxLayout,
+    QVBoxLayout, QFormLayout,
     QMessageBox, QFileDialog, QProgressDialog,
     QWidget, QStackedWidget, QListWidget,
     QLabel, QPushButton,
-    QLineEdit
+    QLineEdit, QCheckBox
 )
 from PySide6.QtGui import QScreen, QKeyEvent
 from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
 from typing import List, Tuple
 
-from files import get_log_file
+from files import get_data_dir, get_log_file
 from graphing import ClassUnifiedAveragesGraph
 from mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class
 from models import UnifiedSubject, Mark, UnifiedPupilGrapher
@@ -144,11 +144,13 @@ class MainWidget(QWidget):
         agg_sem_button = QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
         agg_mon_button = QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
         pup_mon_button = QPushButton('Individualizuota mokinio vidurkių ataskaita pagal laikotarpį')
+        settings_button = QPushButton('Nustatymai')
         notice_label = QLabel()
 
         agg_sem_button.clicked.connect(self.app.view_aggregated_semester_graph)
         agg_mon_button.clicked.connect(self.app.view_aggregated_monthly_selector)
         pup_mon_button.clicked.connect(self.app.view_pupil_monthly_selector)
+        settings_button.clicked.connect(self.on_settings_button_click)
 
         notice_label.setText(f"<a href=\"{REPO_URL}\">Dominykas Svetikas © 2022</a>")
         notice_label.setTextFormat(Qt.RichText)
@@ -163,6 +165,10 @@ class MainWidget(QWidget):
         layout.addWidget(settings_button, alignment=Qt.AlignVCenter)
         layout.addWidget(notice_label, alignment=Qt.AlignRight | Qt.AlignBottom | Qt.AlignJustify)
         self.setLayout(layout)
+
+    def on_settings_button_click(self) -> None:
+        """Reacts to settings button click."""
+        self.app.view_settings()
 
 class SelectGraphWidget(QWidget):
 
@@ -576,6 +582,69 @@ class SelectClassWidget(QWidget):
         self.worker_thread.start()
 
 
+class SettingsWidget(QWidget):
+
+    def __init__(self, app: App) -> None:
+        super().__init__()
+        self.app = app
+        self.unsaved = False
+
+        layout = QVBoxLayout()
+        label = QLabel("Programos nustatymai")
+        self.save_button = QPushButton('Išsaugoti pakeitimus')
+        self.back_button = QPushButton('Grįžti į pradžią')
+
+        self.save_button.clicked.connect(self.on_save_button_click)
+        self.back_button.clicked.connect(self.on_return_button_click)
+
+        settings_layout = QFormLayout()
+        self.last_dir_label = QLabel()
+        self.debugging_checkbox = QCheckBox()
+        self.hide_names_checkbox = QCheckBox()
+        self.save_path_button = QPushButton("Atidaryti")
+
+        self.debugging_checkbox.clicked.connect(self.on_debugging_checkbox_click)
+        self.hide_names_checkbox.clicked.connect(self.on_hide_names_checkbox_click)
+        self.save_path_button.clicked.connect(self.on_save_path_button_click)
+
+        settings_layout.addRow(QLabel("Paskutinė rankiniu būdu analizuota vieta:"), self.last_dir_label)
+        settings_layout.addRow(QLabel("Kūrėjo režimas:"), self.debugging_checkbox)
+        settings_layout.addRow(QLabel("Slėpti mokinių vardus (DEMO):"), self.hide_names_checkbox)
+        settings_layout.addRow(QLabel("Programos duomenys:"), self.save_path_button)
+
+        layout.addWidget(label, alignment=Qt.AlignTop)
+        layout.addLayout(settings_layout)
+        layout.addWidget(self.save_button)
+        layout.addWidget(self.back_button)
+        self.setLayout(layout)
+
+    def on_save_button_click(self) -> None:
+        self.save_state()
+
+    def on_return_button_click(self) -> None:
+        self.app.go_to_back()
+
+    def on_debugging_checkbox_click(self) -> None:
+        self.unsaved = True
+        self.app.settings.debugging = self.debugging_checkbox.isChecked()
+
+    def on_hide_names_checkbox_click(self) -> None:
+        self.unsaved = True
+        self.app.settings.hide_names = self.hide_names_checkbox.isChecked()
+
+    def on_save_path_button_click(self) -> None:
+        os.startfile(get_data_dir())
+
+    def load_state(self) -> None:
+        self.last_dir_label.setText(self.app.settings.last_dir)
+        self.debugging_checkbox.setChecked(self.app.settings.debugging)
+        self.hide_names_checkbox.setChecked(self.app.settings.hide_names)
+
+    def save_state(self) -> None:
+        self.unsaved = False
+        self.app.settings.save()
+        self.app.change_stack(App.MAIN_WIDGET)
+
 class App(QWidget):
 
     MAIN_WIDGET = 0
@@ -584,6 +653,7 @@ class App(QWidget):
     LOGIN_WIDGET = 3
     SELECT_USER_ROLE_WIDGET = 4
     SELECT_CLASS_WIDGET = 5
+    SETTINGS_WIDGET = 6
 
     def __init__(self, settings: Settings):
         super().__init__()
@@ -617,6 +687,7 @@ class App(QWidget):
         self.login_widget = LoginWidget(self)
         self.select_user_role_widget = SelectUserRoleWidget(self)
         self.select_class_widget = SelectClassWidget(self)
+        self.settings_widget = SettingsWidget(self)
 
         # Add said widgets to the StackedWidget
         self.stack.addWidget(self.main_widget)
@@ -625,6 +696,7 @@ class App(QWidget):
         self.stack.addWidget(self.login_widget)
         self.stack.addWidget(self.select_user_role_widget)
         self.stack.addWidget(self.select_class_widget)
+        self.stack.addWidget(self.settings_widget)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.stack)
@@ -640,6 +712,11 @@ class App(QWidget):
     def change_stack(self, index: int) -> None:
         """Change current stack widget."""
         self.stack.setCurrentIndex(index)
+
+    def view_settings(self) -> None:
+        """Opens the settings widget."""
+        self.settings_widget.load_state()
+        self.change_stack(self.SETTINGS_WIDGET)
 
     def view_aggregated_monthly_selector(self):
         self.view_aggregated = True
