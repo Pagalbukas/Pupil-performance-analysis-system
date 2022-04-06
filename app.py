@@ -25,6 +25,8 @@ from parsing import PupilSemesterReportParser, PupilPeriodicReportParser, Parsin
 from settings import Settings
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
+REPO_URL = "https://github.com/Pagalbukas/Pupil-performance-analysis-system"
+
 logger = logging.getLogger("analizatorius")
 logger.setLevel(logging.INFO)
 
@@ -142,14 +144,24 @@ class MainWidget(QWidget):
         agg_sem_button = QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
         agg_mon_button = QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
         pup_mon_button = QPushButton('Individualizuota mokinio vidurkių ataskaita pagal laikotarpį')
+        notice_label = QLabel()
 
         agg_sem_button.clicked.connect(self.app.view_aggregated_semester_graph)
         agg_mon_button.clicked.connect(self.app.view_aggregated_monthly_selector)
         pup_mon_button.clicked.connect(self.app.view_pupil_monthly_selector)
 
-        layout.addWidget(agg_sem_button)
-        layout.addWidget(agg_mon_button)
-        layout.addWidget(pup_mon_button)
+        notice_label.setText(f"<a href=\"{REPO_URL}\">Dominykas Svetikas © 2022</a>")
+        notice_label.setTextFormat(Qt.RichText)
+        notice_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        notice_label.setOpenExternalLinks(True)
+
+        # God forbid I have to mess with this sh*t again
+        # Took longer than aligning a div in CSS
+        layout.addWidget(agg_sem_button, alignment=Qt.AlignVCenter)
+        layout.addWidget(agg_mon_button, alignment=Qt.AlignVCenter)
+        layout.addWidget(pup_mon_button, alignment=Qt.AlignVCenter)
+        layout.addWidget(settings_button, alignment=Qt.AlignVCenter)
+        layout.addWidget(notice_label, alignment=Qt.AlignRight | Qt.AlignBottom | Qt.AlignJustify)
         self.setLayout(layout)
 
 class SelectGraphWidget(QWidget):
