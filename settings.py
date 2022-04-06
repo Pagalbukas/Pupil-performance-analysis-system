@@ -10,9 +10,9 @@ class Settings:
 
     if TYPE_CHECKING:
         username: Optional[str]
-        password: Optional[str]
         last_dir: Optional[str]
         debugging: bool
+        hide_names: bool
 
     def __init__(self, auto_load: bool = True) -> None:
         if auto_load:
@@ -20,16 +20,16 @@ class Settings:
 
     def _load_params(self, data: dict) -> None:
         self.username = data.get("username")
-        self.password = data.get("password")
         self.last_dir = data.get("last_dir")
         self.debugging = data.get("debugging", False)
+        self.hide_names = data.get("hide_names", False)
 
     def _serialize(self) -> str:
         return json.dumps({
             "username": self.username,
-            "password": self.password,
             "last_dir": self.last_dir,
-            "debugging": self.debugging
+            "debugging": self.debugging,
+            "hide_names": self.hide_names
         })
 
     def _xor_bytes(self, data: bytes) -> bytes:
