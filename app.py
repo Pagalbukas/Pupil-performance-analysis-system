@@ -765,6 +765,7 @@ class App(QWidget):
 
         # Go over each summary and use it to create graph points
         graph = ClassUnifiedAveragesGraph(
+            self,
             summary.grade_name + " mokinių bendri vidurkiai",
             [s.representable_name for s in summaries]
         )
@@ -790,7 +791,7 @@ class App(QWidget):
             graph_title += f'{summaries[0].term_start.year} - {summary.term_start.year}'
 
         # Go over each summary and use it to create graph points
-        graph = ClassUnifiedAveragesGraph(graph_title, [s.yearless_representable_name for s in summaries])
+        graph = ClassUnifiedAveragesGraph(self, graph_title, [s.yearless_representable_name for s in summaries])
         for i, summary in enumerate(summaries):
             logger.info(f"Nagrinėjamas ({summary.term_start}-{summary.term_end})")
             for student in summary.students:
@@ -809,7 +810,7 @@ class App(QWidget):
         summary = summaries[-1]
         student_cache = [s.name for s in summary.students]
 
-        grapher = UnifiedPupilGrapher([s.representable_name for s in summaries], student_cache)
+        grapher = UnifiedPupilGrapher(self, [s.representable_name for s in summaries], student_cache)
 
         for i, summary in enumerate(summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.representable_name}")
