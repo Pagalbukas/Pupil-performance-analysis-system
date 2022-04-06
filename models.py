@@ -1,5 +1,11 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, List, Optional, Union
+
 from graphing import PupilSubjectPeriodicAveragesGraph, PupilPeriodicAveragesGraph
+
+if TYPE_CHECKING:
+    from app import App
 
 class SubjectNames:
     """This class contains constants for subject names."""
@@ -197,7 +203,8 @@ class UnifiedSubject:
 
 class UnifiedPupilGrapher:
 
-    def __init__(self, period_names: List[str], pupil_names: List[str]) -> None:
+    def __init__(self, app: App, period_names: List[str], pupil_names: List[str]) -> None:
+        self._app = app
         self.period_names: List[str] = period_names
         self.pupil_names: List[str] = pupil_names
         period_cnt = len(self.period_names)
@@ -210,6 +217,7 @@ class UnifiedPupilGrapher:
     def display_subjects_graph(self, student_index: int) -> None:
         name = self.pupil_names[student_index]
         graph = PupilSubjectPeriodicAveragesGraph(
+            self._app,
             f"{name} dalykų vidurkiai",
             self.period_names,
             self.pupil_subjects[student_index]
@@ -219,6 +227,7 @@ class UnifiedPupilGrapher:
     def display_aggregated_graph(self, student_index: int) -> None:
         name = self.pupil_names[student_index]
         graph = PupilPeriodicAveragesGraph(
+            self._app,
             f"{name} bendras vidurkis",
             self.period_names,
             self.pupil_averages[student_index],

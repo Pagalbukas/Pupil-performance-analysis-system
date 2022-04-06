@@ -19,6 +19,7 @@ from matplotlib.lines import Line2D # noqa: E402
 from typing import TYPE_CHECKING # noqa: E402
 
 if TYPE_CHECKING:
+    from app import App
     from models import UnifiedSubject # noqa: E402
 
 # Modify default save figure to have more fine-grained control over available file formats
@@ -83,7 +84,8 @@ class BaseGraph:
     LINE_STYLES = ['-', '--', '-.', ':']
     STYLE_COUNT = len(LINE_STYLES)
 
-    def __init__(self, title: str) -> None:
+    def __init__(self, app: App, title: str) -> None:
+        self.app = app
         self.title = title
 
     def set_limits(self, ax) -> None:
@@ -217,15 +219,14 @@ class ClassAveragesGraph(BaseGraph):
 
     def __init__(
         self,
+        app: App,
         title: str,
         period_names: List[str],
-        anonymize_names: bool = False,
         perform_rounding: bool = False
     ) -> None:
-        super().__init__(title)
+        super().__init__(app, title)
         self.period_names = period_names
         self.students = {}
-        self.anonymize_names = anonymize_names
         self.perform_rounding = perform_rounding
 
     def get_or_create_student(self, student_name: str) -> Optional[float]:
@@ -267,7 +268,7 @@ class ClassAveragesGraph(BaseGraph):
 
     def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
         # Anonymize names when displaying for unauthorized people, in order to prevent disclosing of any additional data
-        if self.anonymize_names:
+        if self.app.settings.hide_names:
             self.anonymize_students()
         return (self.period_names, self.get_graph_values())
 
@@ -276,17 +277,17 @@ class ClassUnifiedAveragesGraph(ClassAveragesGraph):
 
     def __init__(
         self,
+        app: App,
         title: str,
         period_names: List[str],
-        anonymize_names: bool = False,
         perform_rounding: bool = False
     ) -> None:
-        super().__init__(title, period_names, anonymize_names, perform_rounding)
+        super().__init__(app, title, period_names, perform_rounding)
 
 class PupilAveragesGraph(BaseGraph):
 
-    def __init__(self, title: str, period_names: List[str], perform_rounding: bool = False) -> None:
-        super().__init__(title)
+    def __init__(self, app: App, title: str, period_names: List[str], perform_rounding: bool = False) -> None:
+        super().__init__(app, title)
         self.period_names = period_names
         self.perform_rounding = perform_rounding
 
@@ -304,13 +305,14 @@ class PupilPeriodicAveragesGraph(PupilAveragesGraph):
 
     def __init__(
         self,
+        app: App,
         title: str,
         period_names: List[str],
         pupil_averages: List[Optional[float]], class_averages: List[Optional[float]],
         graph_class: bool = True,
         perform_rounding: bool = False
     ) -> None:
-        super().__init__(title, period_names, perform_rounding)
+        super().__init__(app, title, period_names, perform_rounding)
         self.pupil_averages = pupil_averages
         self.class_averages = class_averages
         self.graph_class = graph_class
@@ -327,11 +329,12 @@ class PupilSubjectPeriodicAveragesGraph(PupilAveragesGraph):
 
     def __init__(
         self,
+        app: App,
         title: str,
         period_names: List[str], subjects: List[UnifiedSubject],
         perform_rounding: bool = False
     ) -> None:
-        super().__init__(title, period_names, perform_rounding)
+        super().__init__(app, title, period_names, perform_rounding)
         self.subjects = subjects
 
     def get_graph_values(self) -> List[GraphValue]:
