@@ -88,7 +88,7 @@ class BaseGraph:
         self.app = app
         self.title = title
 
-    def set_limits(self, ax) -> None:
+    def set_labels(self, ax) -> None:
         ax.set_ylabel('Vidurkis')
         ax.set_xlabel('Laikotarpis')
 
@@ -149,8 +149,8 @@ class BaseGraph:
             line_bound_annotations[line] = annotations
             lines.append(line)
 
-        # Set labels and limits of the axles
-        self.set_limits(ax)
+        # Set labels of the axles
+        self.set_labels(ax)
 
         # Adjusts the plot size
         if use_experimental_legend:

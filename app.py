@@ -609,7 +609,7 @@ class SettingsWidget(QWidget):
 
         settings_layout.addRow(QLabel("Paskutinė rankiniu būdu analizuota vieta:"), self.last_dir_label)
         settings_layout.addRow(QLabel("Kūrėjo režimas:"), self.debugging_checkbox)
-        settings_layout.addRow(QLabel("Slėpti mokinių vardus (DEMO):"), self.hide_names_checkbox)
+        settings_layout.addRow(QLabel("Demonstracinis režimas:"), self.hide_names_checkbox)
         settings_layout.addRow(QLabel("Programos duomenys:"), self.save_path_button)
 
         layout.addWidget(label, alignment=Qt.AlignTop)
@@ -636,7 +636,7 @@ class SettingsWidget(QWidget):
         os.startfile(get_data_dir())
 
     def load_state(self) -> None:
-        self.last_dir_label.setText(self.app.settings.last_dir)
+        self.last_dir_label.setText(self.app.settings.last_dir or "nėra")
         self.debugging_checkbox.setChecked(self.app.settings.debugging)
         self.hide_names_checkbox.setChecked(self.app.settings.hide_names)
 
