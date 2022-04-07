@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Optional, Union
 
+from files import get_ignored_item_filters
 from graphing import PupilSubjectPeriodicAveragesGraph, PupilPeriodicAveragesGraph
+
+IGNORED_ITEM_FILTERS = get_ignored_item_filters()
 
 if TYPE_CHECKING:
     from app import App
@@ -137,39 +140,33 @@ class UnifiedSubject:
         """Adds a mark to the list."""
         self.marks.append(mark)
 
+    def is_name_ignored(self) -> bool:
+        """Returns true if subject name is ignored as defined in ignoruoti_dalykai.txt"""
+        for item_filter in IGNORED_ITEM_FILTERS:
+            t, word = item_filter
+            check = False
+            # Normal check of matching the name
+            if t == 1:
+                check = self.name == word
+            # Check if name starts with
+            elif t == 3:
+                check = self.name.startswith(word)
+            # Check if name ends with
+            elif t == 5:
+                check = self.name.endswith(word)
+            # Check if in string
+            else:
+                check = word in self.name
+            if check:
+                return True
+        return False
+
     @property
     def is_ignored(self) -> bool:
         """Returns true if subject's mark value should be ignored.
 
-        This is based on many factors, including subjects which are not
-        really subjects, per say."""
-        return (
-            # Informal education
-            self.name == "Neformalusis ugdymas"
-            or self.name == "Neformalus ugdymas"
-
-            # Moral related
-            or self.name.startswith("Dorinis ugdymas")
-
-            # Modules
-            or self.is_module
-
-            # Catch clauses for home schooling
-            # As observed, the data is transferred to the original subject
-            # marking too
-            or self.name.startswith("Namų ugdymas")
-            or self.name.startswith("Namų mokymas")
-
-            # No idea
-            or self.name == "Integruotas technologijų kursas"
-            or self.name == "Lietuvių kalbos rašyba, skyryba ir vartojimas (konsultacijos)"
-            or self.name == "Žmogaus sauga"
-            or self.name == "Karjeros ugdymas"
-
-            # Social work for which you get hours
-            or self.name == "Socialinė-pilietinė veikla"
-            or self.name == "Socialinė veikla"
-        )
+        This is based on whether the subject is a module or the name is ignored."""
+        return self.is_module or self.is_name_ignored()
 
     @property
     def generic_name(self) -> str:

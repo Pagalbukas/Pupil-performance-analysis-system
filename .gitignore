@@ -3,5 +3,5 @@ main.dist
 main.build
 .temp
 dist
-build/main
+build
 *.exe
