@@ -23,6 +23,10 @@ def get_log_file() -> str:
     return os.path.join(get_data_dir(), "log.log")
 
 def copy_config_to_data() -> None:
+
+    # Force creation of the data directory
+    get_data_dir()
+
     if not os.path.exists(IGNORED_ITEMS_SOURCE_PATH):
         return
 
