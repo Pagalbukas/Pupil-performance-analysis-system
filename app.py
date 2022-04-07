@@ -887,7 +887,7 @@ class App(QWidget):
         summary = summaries[-1]
         student_cache = [s.name for s in summary.students]
 
-        grapher = UnifiedPupilGrapher(self, [s.representable_name for s in summaries], student_cache)
+        grapher = UnifiedPupilGrapher(self, [(s.term_start, s.term_end) for s in summaries], student_cache)
 
         for i, summary in enumerate(summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.representable_name}")

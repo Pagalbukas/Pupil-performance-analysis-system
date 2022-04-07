@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Union
+import datetime
+
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 from files import get_ignored_item_filters
 from graphing import PupilSubjectPeriodicAveragesGraph, PupilPeriodicAveragesGraph
@@ -200,9 +202,14 @@ class UnifiedSubject:
 
 class UnifiedPupilGrapher:
 
-    def __init__(self, app: App, period_names: List[str], pupil_names: List[str]) -> None:
+    def __init__(
+        self,
+        app: App,
+        periods: List[Tuple[datetime.datetime, datetime.datetime]],
+        pupil_names: List[str]
+    ) -> None:
         self._app = app
-        self.period_names: List[str] = period_names
+        self.periods = periods
         self.pupil_names: List[str] = pupil_names
         period_cnt = len(self.period_names)
         pupil_cnt = len(self.pupil_names)
@@ -211,11 +218,26 @@ class UnifiedPupilGrapher:
             [None for _ in range(period_cnt)] for _ in range(pupil_cnt)
         ]
 
+    @property
+    def period_names(self) -> List[str]:
+        names = []
+        for period in self.periods:
+            start, end = period
+            names.append(f'{start.strftime("%m-%d")} - {end.strftime("%m-%d")}')
+        return names
+
+    @property
+    def period(self) -> str:
+        """Returns the period."""
+        if self.periods[0][0].year == self.periods[-1][0].year:
+            return str(self.periods[0][0].year)
+        return f'{self.periods[0][0].year} - {self.periods[-1][0].year}'
+
     def display_subjects_graph(self, student_index: int) -> None:
         name = self.pupil_names[student_index]
         graph = PupilSubjectPeriodicAveragesGraph(
             self._app,
-            f"{name} dalykų vidurkiai",
+            f"{name} dalykų vidurkiai\n" + self.period,
             self.period_names,
             self.pupil_subjects[student_index]
         )
@@ -225,7 +247,7 @@ class UnifiedPupilGrapher:
         name = self.pupil_names[student_index]
         graph = PupilPeriodicAveragesGraph(
             self._app,
-            f"{name} bendras vidurkis",
+            f"{name} bendras vidurkis\n" + self.period,
             self.period_names,
             self.pupil_averages[student_index],
             self.compute_class_averages(),
