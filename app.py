@@ -604,15 +604,18 @@ class SettingsWidget(QWidget):
         self.last_dir_label = QLabel()
         self.debugging_checkbox = QCheckBox()
         self.hide_names_checkbox = QCheckBox()
+        self.flip_names_checkbox = QCheckBox()
         self.save_path_button = QPushButton("Atidaryti")
 
         self.debugging_checkbox.clicked.connect(self.on_debugging_checkbox_click)
         self.hide_names_checkbox.clicked.connect(self.on_hide_names_checkbox_click)
+        self.flip_names_checkbox.clicked.connect(self.on_flip_names_checkbox_click)
         self.save_path_button.clicked.connect(self.on_save_path_button_click)
 
         settings_layout.addRow(QLabel("Paskutinė rankiniu būdu analizuota vieta:"), self.last_dir_label)
         settings_layout.addRow(QLabel("Kūrėjo režimas:"), self.debugging_checkbox)
         settings_layout.addRow(QLabel("Demonstracinis režimas:"), self.hide_names_checkbox)
+        settings_layout.addRow(QLabel("Apversti vardus (grafikuose):"), self.flip_names_checkbox)
         settings_layout.addRow(QLabel("Programos duomenys:"), self.save_path_button)
 
         layout.addWidget(label, alignment=Qt.AlignTop)
@@ -635,6 +638,10 @@ class SettingsWidget(QWidget):
         self.unsaved = True
         self.app.settings.hide_names = self.hide_names_checkbox.isChecked()
 
+    def on_flip_names_checkbox_click(self) -> None:
+        self.unsaved = True
+        self.app.settings.flip_names = self.flip_names_checkbox.isChecked()
+
     def on_save_path_button_click(self) -> None:
         os.startfile(get_data_dir())
 
@@ -642,9 +649,11 @@ class SettingsWidget(QWidget):
         self.last_dir_label.setText(self.app.settings.last_dir or "nėra")
         self.debugging_checkbox.setChecked(self.app.settings.debugging)
         self.hide_names_checkbox.setChecked(self.app.settings.hide_names)
+        self.flip_names_checkbox.setChecked(self.app.settings.flip_names)
 
     def save_state(self) -> None:
         self.unsaved = False
+        self.app.settings.last_ver = list(__VERSION__)
         self.app.settings.save()
         self.app.change_stack(App.MAIN_WIDGET)
 

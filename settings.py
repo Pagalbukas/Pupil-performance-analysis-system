@@ -2,7 +2,7 @@ import json
 import os
 
 from itertools import cycle
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from files import get_data_dir
 
@@ -13,6 +13,8 @@ class Settings:
         last_dir: Optional[str]
         debugging: bool
         hide_names: bool
+        flip_names: bool
+        last_ver: Optional[List[int]]
 
     def __init__(self, auto_load: bool = True) -> None:
         if auto_load:
@@ -23,13 +25,17 @@ class Settings:
         self.last_dir = data.get("last_dir")
         self.debugging = data.get("debugging", False)
         self.hide_names = data.get("hide_names", False)
+        self.flip_names = data.get("flip_names", False)
+        self.last_ver = data.get("last_ver")
 
     def _serialize(self) -> str:
         return json.dumps({
             "username": self.username,
             "last_dir": self.last_dir,
             "debugging": self.debugging,
-            "hide_names": self.hide_names
+            "hide_names": self.hide_names,
+            "flip_names": self.flip_names,
+            "last_ver": self.last_ver
         })
 
     def _xor_bytes(self, data: bytes) -> bytes:
