@@ -1,16 +1,10 @@
 from __future__ import annotations
 
-import datetime
-
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 from files import get_ignored_item_filters
-from graphing import PupilSubjectPeriodicAveragesGraph, PupilPeriodicAveragesGraph
 
 IGNORED_ITEM_FILTERS = get_ignored_item_filters()
-
-if TYPE_CHECKING:
-    from app import App
 
 class SubjectNames:
     """This class contains constants for subject names."""
@@ -62,21 +56,6 @@ COMMON_GENERIC_NAMES = {
     "kūno kultūra": SubjectNames.PE
 }
 
-class Subject:
-
-    if TYPE_CHECKING:
-        name: str
-        mark: Optional[Union[int, float, str]]
-        is_module: bool
-
-    def __init__(self, name: str, mark: Optional[Union[int, float, str]]) -> None:
-        self.name = name
-        self.mark = mark
-        self.is_module = "modulis" in self.name
-
-    def __repr__(self) -> str:
-        return f'<Subject name="{self.name}" mark={self.mark}>'
-
 class Mark:
 
     def __init__(self, raw_value: Optional[Union[int, float, str]]) -> None:
@@ -125,22 +104,13 @@ class Mark:
 
 class UnifiedSubject:
 
-    if TYPE_CHECKING:
-        name: str
-        mark: Optional[Union[int, float, str]]
-        is_module: bool
-
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, mark: Mark) -> None:
         self.name = name
-        self.marks: List[Mark] = []
+        self.mark = mark
         self.is_module = "modulis" in self.name
 
     def __repr__(self) -> str:
-        return f'<UnifiedSubject name="{self.name}" marks={len(self.marks)}>'
-
-    def add_mark(self, mark: Mark) -> None:
-        """Adds a mark to the list."""
-        self.marks.append(mark)
+        return f'<UnifiedSubject name="{self.name}" mark={self.mark}>'
 
     def is_name_ignored(self) -> bool:
         """Returns true if subject name is ignored as defined in ignoruoti_dalykai.txt"""
@@ -200,85 +170,18 @@ class UnifiedSubject:
 
         return genericized_name
 
-class UnifiedPupilGrapher:
+class UnifiedPupil:
 
-    def __init__(
-        self,
-        app: App,
-        periods: List[Tuple[datetime.datetime, datetime.datetime]],
-        pupil_names: List[str]
-    ) -> None:
-        self._app = app
-        self.periods = periods
-        self.pupil_names: List[str] = pupil_names
-        period_cnt = len(self.period_names)
-        pupil_cnt = len(self.pupil_names)
-        self.pupil_subjects: List[List[UnifiedSubject]] = [[] for _ in range(pupil_cnt)]
-        self.pupil_averages: List[List[Optional[Union[int, float]]]] = [
-            [None for _ in range(period_cnt)] for _ in range(pupil_cnt)
-        ]
-
-    @property
-    def period_names(self) -> List[str]:
-        names = []
-        for period in self.periods:
-            start, end = period
-            names.append(f'{start.strftime("%m-%d")} - {end.strftime("%m-%d")}')
-        return names
-
-    @property
-    def period(self) -> str:
-        """Returns the period."""
-        if self.periods[0][0].year == self.periods[-1][0].year:
-            return str(self.periods[0][0].year)
-        return f'{self.periods[0][0].year} - {self.periods[-1][0].year}'
-
-    def display_subjects_graph(self, student_index: int) -> None:
-        name = self.pupil_names[student_index]
-        graph = PupilSubjectPeriodicAveragesGraph(
-            self._app,
-            f"{name} dalykų vidurkiai\n" + self.period,
-            self.period_names,
-            self.pupil_subjects[student_index]
-        )
-        graph.display(use_experimental_legend=True)
-
-    def display_aggregated_graph(self, student_index: int) -> None:
-        name = self.pupil_names[student_index]
-        graph = PupilPeriodicAveragesGraph(
-            self._app,
-            f"{name} bendras vidurkis\n" + self.period,
-            self.period_names,
-            self.pupil_averages[student_index],
-            self.compute_class_averages(),
-            True
-        )
-        graph.display(use_experimental_legend=True)
-
-    def compute_class_averages(self) -> List[Optional[float]]:
-        averages = [0 for _ in range(len(self.period_names))]
-        for pupil in self.pupil_averages:
-            for i, average in enumerate(pupil):
-                averages[i] += average
-        return [round(a / len(self.pupil_names), 2) for a in averages]
-
-class Student:
-
-    if TYPE_CHECKING:
-        name: str
-        subjects: List[Subject]
-        average: Optional[float]
-
-    def __init__(self, name: str, subjects: List[Subject], average: Optional[float]) -> None:
+    def __init__(self, name: str, subjects: List[UnifiedSubject], average: Mark) -> None:
         self.name = name
         self.subjects = subjects
         self.average = average
 
     def __repr__(self) -> str:
-        return f'<Student name="{self.name}" average={self.average} subjects={len(self.subjects)}>'
+        return f'<UnifiedPupil name="{self.name}" average={self.average} subjects={len(self.subjects)}>'
 
     @property
-    def sorted_subjects(self) -> List[Subject]:
+    def sorted_subjects(self) -> List[UnifiedSubject]:
         """Returns a sorted subject list by name."""
         return sorted(self.subjects, key=lambda s: s.name)
 

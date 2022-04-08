@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import matplotlib
 import os
+import logging
 
 # Tell matplotlib to use QtAgg explicitly
 matplotlib.use('QtAgg')
@@ -20,7 +21,9 @@ from typing import TYPE_CHECKING # noqa: E402
 
 if TYPE_CHECKING:
     from app import App
-    from models import UnifiedSubject # noqa: E402
+    from summaries import BaseClassReportSummary, ClassPeriodReportSummary
+
+logger = logging.getLogger("analizatorius")
 
 # Modify default save figure to have more fine-grained control over available file formats
 def save_figure(self, *args):
@@ -84,7 +87,7 @@ class BaseGraph:
     LINE_STYLES = ['-', '--', '-.', ':']
     STYLE_COUNT = len(LINE_STYLES)
 
-    def __init__(self, app: App, title: str) -> None:
+    def __init__(self, app: App, title: str = None) -> None:
         self.app = app
         self.title = title
 
@@ -215,81 +218,121 @@ class BaseGraph:
         plt.show()
 
 
-class ClassAveragesGraph(BaseGraph):
+class G(BaseGraph):
 
-    def __init__(
-        self,
-        app: App,
-        title: str,
-        period_names: List[str],
-        perform_rounding: bool = False
-    ) -> None:
-        super().__init__(app, title)
-        self.period_names = period_names
-        self.students = {}
-        self.perform_rounding = perform_rounding
+    def __init__(self, app: App, summaries: List[BaseClassReportSummary]) -> None:
+        super().__init__(app)
+        self.summaries = summaries
+        self._load()
 
-    def get_or_create_student(self, student_name: str) -> Optional[float]:
-        """Creates or gets a student entry in the dictionary and returns the reference."""
-        if self.students.get(student_name) is None:
-            self.students[student_name] = [None] * len(self.period_names)
-        return self.get_student(student_name)
+    def _load(self) -> None:
+        """Creates graph values from summaries."""
+        raise NotImplementedError
 
-    def get_student(self, student_name: str) -> Optional[float]:
-        """Returns a reference of a student entry in the dictionary."""
-        return self.students[student_name]
+    @property
+    def period_names(self) -> List[str]:
+        """Returns a list of period names strings for graphing as X value."""
+        raise NotImplementedError
 
-    def anonymize_students(self) -> None:
-        """Anonymizes the names of students in the graph."""
+    def get_graph_values(self) -> List[GraphValue]:
+        """Returns a list of GraphValues for graphing as Y value."""
+        raise NotImplementedError
+
+    def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
+        """Returns X and Y values for graphing."""
+        return (self.period_names, self.get_graph_values())
+
+
+class UnifiedClassAveragesGraph(G):
+    """A unified aggregated class averages graph."""
+
+    def __init__(self, app: App, summaries: List[BaseClassReportSummary]) -> None:
+        self.pupils = {}
+        super().__init__(app, summaries)
+
+    def _load(self) -> None:
+        pupil_names = [s.name for s in self.summaries[-1].pupils]
+
+        # Determine graph title
+        first_summary_year = self.summaries[0].term_start.year
+        last_summary_year = self.summaries[-1].term_end.year
+
+        self.title = self.summaries[-1].grade_name + " mokinių bendri vidurkiai\n"
+        if first_summary_year == last_summary_year:
+            self.title += str(first_summary_year)
+        else:
+            self.title += f'{first_summary_year} - {last_summary_year}'
+
+        for i, summary in enumerate(self.summaries):
+            logger.info(f"Nagrinėjamas ({summary.full_representable_name})")
+            for pupil in summary.pupils:
+                # If student name is not in cache, ignore them
+                if pupil.name not in pupil_names:
+                    logger.warn(f"Mokinys '{pupil.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
+                    continue
+
+                if self.app.settings.flip_names:
+                    self._get_pupil_object(pupil.sane_name)[i] = pupil.average.clean
+                else:
+                    self._get_pupil_object(pupil.name)[i] = pupil.average.clean
+
+    @property
+    def period_names(self) -> List[str]:
+        return [s.representable_name for s in self.summaries]
+
+    def _get_pupil_object(self, name: str) -> list:
+        pupil = self.pupils.get(name)
+        if pupil is None:
+            self.pupils[name] = [None] * len(self.period_names)
+            pupil = self.pupils[name]
+        return pupil
+
+    def _anonymize_pupil_names(self) -> None:
+        """Anonymizes the names of pupils in the graph."""
         names = ["Antanas", "Bernardas", "Cezis", "Dainius", "Ernestas", "Henrikas", "Jonas", "Petras", "Tilius"]
         surnames = ["Antanivičius", "Petraitis", "Brazdžionis", "Katiliškis", "Mickevičius", "Juozevičius", "Eilėraštinis"]
         new_dict = {}
         cached_combinations = []
 
         # Shuffle student names to avoid being recognized by the position in the legend
-        student_names = list(self.students.keys())
+        student_names = list(self.pupils.keys())
         shuffle(student_names)
 
         for student in student_names:
             name = choice(names) + " " + choice(surnames)
             while name in cached_combinations:
                 name = choice(names) + " " + choice(surnames)
-            new_dict[name] = self.students[student]
+            new_dict[name] = self.pupils[student]
             cached_combinations.append(name)
-        self.students = new_dict
+        self.pupils = new_dict
 
     def get_graph_values(self) -> List[GraphValue]:
-        if not self.perform_rounding:
-            return [GraphValue(n, self.students[n]) for n in self.students.keys()]
-        return [
-            GraphValue(n, [round(v, 1) for v in self.students[n]])
-            for n in self.students.keys()
-        ]
+        return [GraphValue(n, self.pupils[n]) for n in self.pupils.keys()]
 
     def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
         # Anonymize names when displaying for unauthorized people, in order to prevent disclosing of any additional data
         if self.app.settings.hide_names:
-            self.anonymize_students()
+            self._anonymize_pupil_names()
         return (self.period_names, self.get_graph_values())
 
+class AbstractPupilAveragesGraph(G):
+    """A unified abstract class pupil averages graph."""
 
-class ClassUnifiedAveragesGraph(ClassAveragesGraph):
+    def __init__(self, app: App, summaries: List[ClassPeriodReportSummary]) -> None:
+        super().__init__(app, summaries)
 
-    def __init__(
-        self,
-        app: App,
-        title: str,
-        period_names: List[str],
-        perform_rounding: bool = False
-    ) -> None:
-        super().__init__(app, title, period_names, perform_rounding)
+    @property
+    def period_names(self) -> List[str]:
+        return [s.representable_name for s in self.summaries]
 
-class PupilAveragesGraph(BaseGraph):
+    @property
+    def period(self) -> str:
+        first_summary_year = self.summaries[0].term_start.year
+        last_summary_year = self.summaries[-1].term_end.year
 
-    def __init__(self, app: App, title: str, period_names: List[str], perform_rounding: bool = False) -> None:
-        super().__init__(app, title)
-        self.period_names = period_names
-        self.perform_rounding = perform_rounding
+        if first_summary_year == last_summary_year:
+            return str(first_summary_year)
+        return f'{first_summary_year} - {last_summary_year}'
 
     def get_graph_values(self) -> List[GraphValue]:
         raise NotImplementedError
@@ -297,54 +340,92 @@ class PupilAveragesGraph(BaseGraph):
     def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
         return (self.period_names, self.get_graph_values())
 
-class PupilPeriodicAveragesGraph(PupilAveragesGraph):
-    """This class implements pupil periodic averages graph.
+class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):
+    """This class implements pupil periodic averages graph."""
 
-    Can also compare to the class average.
-    """
+    def __init__(self, app: App, summaries: List[ClassPeriodReportSummary], pupil_idx: int) -> None:
+        self.pupil_idx = pupil_idx
+        self.pupils = summaries[-1].pupils
+        self.pupil_averages: List[List[Optional[float]]] = [
+            [None for _ in range(len(summaries))] for _ in range(len(self.pupils))
+        ]
+        super().__init__(app, summaries)
 
-    def __init__(
-        self,
-        app: App,
-        title: str,
-        period_names: List[str],
-        pupil_averages: List[Optional[float]], class_averages: List[Optional[float]],
-        graph_class: bool = True,
-        perform_rounding: bool = False
-    ) -> None:
-        super().__init__(app, title, period_names, perform_rounding)
-        self.pupil_averages = pupil_averages
-        self.class_averages = class_averages
-        self.graph_class = graph_class
+    def _load(self) -> None:
+        name = self.pupils[self.pupil_idx].name
+        if self.app.settings.flip_names:
+            name = self.pupils[self.pupil_idx].sane_name
+
+        self.title = f"{name} bendras vidurkis\n{self.period}"
+        for i, summary in enumerate(self.summaries):
+            logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
+            for j, pupil in enumerate(summary.pupils):
+                self.pupil_averages[j][i] = pupil.average.clean
+
+    def _compute_class_averages(self) -> List[Optional[float]]:
+        averages = [[0, 0] for _ in range(len(self.period_names))]
+        for pupil in self.pupil_averages:
+            for i, average in enumerate(pupil):
+                if average is not None:
+                    averages[i][0] += average
+                    averages[i][1] += 1
+        return [round(s / t, 2) for s, t in averages]
 
     def get_graph_values(self) -> List[GraphValue]:
         """Returns a list of GraphValues which represent pupil averages."""
-        values = [GraphValue("Mokinio vidurkis", self.pupil_averages)]
+        values = [GraphValue("Mokinio vidurkis", self.pupil_averages[self.pupil_idx])]
         if self.graph_class:
-            values.append(GraphValue("Klasės vidurkis", self.class_averages))
+            values.append(GraphValue("Klasės vidurkis", self._compute_class_averages()))
         return values
 
-class PupilSubjectPeriodicAveragesGraph(PupilAveragesGraph):
+    def display(
+        self,
+        use_styled_colouring: bool = True,
+        use_experimental_legend: bool = False,
+        show_class_average: bool = True
+    ) -> None:
+        self.graph_class = show_class_average
+        return super().display(use_styled_colouring, use_experimental_legend)
+
+class PupilSubjectPeriodicAveragesGraph(AbstractPupilAveragesGraph):
     """This class implements pupil subject periodic averages graph."""
 
-    def __init__(
-        self,
-        app: App,
-        title: str,
-        period_names: List[str], subjects: List[UnifiedSubject],
-        perform_rounding: bool = False
-    ) -> None:
-        super().__init__(app, title, period_names, perform_rounding)
-        self.subjects = subjects
+    def __init__(self, app: App, summaries: List[ClassPeriodReportSummary], pupil_idx: int) -> None:
+        self.pupil_idx = pupil_idx
+        self.pupils = summaries[-1].pupils
+        self.subjects = {}
+        super().__init__(app, summaries)
+
+    def _get_subject_object(self, name: str) -> list:
+        subject = self.subjects.get(name)
+        if subject is None:
+            self.subjects[name] = [None] * len(self.period_names)
+            subject = self.subjects[name]
+        return subject
+
+    def _load(self) -> None:
+        name = self.pupils[self.pupil_idx].name
+        if self.app.settings.flip_names:
+            name = self.pupils[self.pupil_idx].sane_name
+
+        self.title = f"{name} dalykų vidurkiai\n{self.period}"
+        for i, summary in enumerate(self.summaries):
+            logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
+
+            for student in summary.pupils:
+                if student.name != self.pupils[self.pupil_idx].name:
+                    continue
+
+                for subject in student.sorted_subjects:
+                    if not subject.is_ignored:
+                        self._get_subject_object(subject.name)[i] = subject.mark.clean
 
     def get_graph_values(self) -> List[GraphValue]:
         """Returns a list of GraphValues which are subjects which have at least a single mark."""
         values = []
-        for subject in self.subjects:
-            if subject.is_ignored:
+        for name in self.subjects:
+            marks = self.subjects[name]
+            if marks == [None] * len(marks):
                 continue
-            marks = [m.clean for m in subject.marks]
-            if marks == [None] * len(subject.marks):
-                continue
-            values.append(GraphValue(subject.name, marks))
+            values.append(GraphValue(name, marks))
         return values

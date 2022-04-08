@@ -18,9 +18,8 @@ from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
 from typing import List, Tuple
 
 from files import get_data_dir, get_log_file
-from graphing import ClassUnifiedAveragesGraph
+from graphing import PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph, UnifiedClassAveragesGraph
 from mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class
-from models import UnifiedSubject, Mark, UnifiedPupilGrapher
 from parsing import PupilSemesterReportParser, PupilPeriodicReportParser, ParsingError
 from settings import Settings
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
@@ -213,7 +212,7 @@ class PupilSelectionWidget(QWidget):
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
-        self.grapher: UnifiedPupilGrapher = None
+        self.summaries = []
         self.selected_index: int = None
 
         layout = QVBoxLayout()
@@ -254,19 +253,21 @@ class PupilSelectionWidget(QWidget):
     def display_subjects_graph(self) -> None:
         if self.selected_index is None:
             return
-        self.grapher.display_subjects_graph(self.selected_index)
+        graph = PupilSubjectPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
+        graph.display(use_experimental_legend=True)
 
     def display_aggregated_graph(self) -> None:
         if self.selected_index is None:
             return
-        self.grapher.display_aggregated_graph(self.selected_index)
+        graph = PupilPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
+        graph.display(use_experimental_legend=True)
 
-    def update_data(self, grapher: UnifiedPupilGrapher) -> None:
-        """Updates widget data.."""
-        self.grapher = grapher
+    def update_data(self, summaries: List[ClassPeriodReportSummary]) -> None:
+        """Updates widget data."""
+        self.summaries = summaries
         self.name_list.clearSelection()
         self.name_list.clear()
-        for i, name in enumerate(self.grapher.pupil_names):
+        for i, name in enumerate([p.name for p in summaries[-1].pupils]):
             self.name_list.insertItem(i, name)
         self.disable_buttons()
 
@@ -849,77 +850,17 @@ class App(QWidget):
         self.display_aggregated_semester_graph(summaries)
 
     def display_aggregated_semester_graph(self, summaries: List[ClassSemesterReportSummary]) -> None:
-        summary = summaries[-1]
-        student_cache = [s.name for s in summary.students]
-
-        # Go over each summary and use it to create graph points
-        graph = ClassUnifiedAveragesGraph(
-            self,
-            summary.grade_name + " mokinių bendri vidurkiai",
-            [s.representable_name for s in summaries]
-        )
-        for i, summary in enumerate(summaries):
-            logger.info(f"Nagrinėjamas {summary.period_name} ({summary.term_start}-{summary.term_end})")
-            for student in summary.students:
-                # If student name is not in cache, ignore them
-                if student.name not in student_cache:
-                    logger.warn(f"Mokinys '{student.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
-                    continue
-                graph.get_or_create_student(student.name)[i] = student.average
+        graph = UnifiedClassAveragesGraph(self, summaries)
         graph.display(use_experimental_legend=True)
 
     def display_aggregated_monthly_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
-        summary = summaries[-1]
-        student_cache = [s.name for s in summary.students]
-
-        # Determine graph title
-        graph_title = summary.grade_name + " mokinių bendri vidurkiai\n"
-        if summaries[0].term_start.year == summary.term_start.year:
-            graph_title += str(summary.term_start.year)
-        else:
-            graph_title += f'{summaries[0].term_start.year} - {summary.term_start.year}'
-
-        # Go over each summary and use it to create graph points
-        graph = ClassUnifiedAveragesGraph(self, graph_title, [s.yearless_representable_name for s in summaries])
-        for i, summary in enumerate(summaries):
-            logger.info(f"Nagrinėjamas ({summary.term_start}-{summary.term_end})")
-            for student in summary.students:
-
-                # If student name is not in cache, ignore them
-                if student.name not in student_cache:
-                    logger.warn(f"Mokinys '{student.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
-                    continue
-
-                graph.get_or_create_student(student.name)[i] = student.average
-
+        graph = UnifiedClassAveragesGraph(self, summaries)
         graph.display(use_experimental_legend=True)
         self.go_to_back()
 
     def display_pupil_monthly_graph_selector(self, summaries: List[ClassPeriodReportSummary]):
-        summary = summaries[-1]
-        student_cache = [s.name for s in summary.students]
-
-        grapher = UnifiedPupilGrapher(self, [(s.term_start, s.term_end) for s in summaries], student_cache)
-
-        for i, summary in enumerate(summaries):
-            logger.info(f"Nagrinėjamas laikotarpis: {summary.representable_name}")
-
-            for j, student in enumerate(summary.students):
-                if student.name not in student_cache:
-                    logger.warn(f"Mokinys '{student.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
-                    continue
-
-                grapher.pupil_averages[j][i] = student.average
-
-                for k, subject in enumerate(student.sorted_subjects):
-                    if not any(subject.name == d.name for d in grapher.pupil_subjects[j]):
-                        uni_sub = UnifiedSubject(subject.name)
-                        uni_sub.marks = [None] * len(grapher.period_names)
-                        grapher.pupil_subjects[j].append(uni_sub)
-                    grapher.pupil_subjects[j][k].marks[i] = Mark(subject.mark)
-
         self.select_pupil_widget.disable_buttons()
-        self.select_pupil_widget.update_data(grapher)
+        self.select_pupil_widget.update_data(summaries)
         self.change_stack(self.SELECT_PUPIL_WIDGET)
 
     def show_error_box(self, message: str) -> None:

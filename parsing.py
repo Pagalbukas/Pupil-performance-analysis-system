@@ -3,7 +3,7 @@ import datetime
 from typing import TYPE_CHECKING, List, Optional, Union
 
 from reading import SpreadsheetReader
-from models import Student, Subject
+from models import Mark, UnifiedPupil, UnifiedSubject
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
 class ParsingError(Exception):
@@ -65,8 +65,8 @@ class PupilSemesterReportParser(BaseParser):
         raw_term_value = raw_term_value.split(": ")[1].strip() # Split here because the word 'Periodas' could also be used
         term_value = raw_term_value.split("-")
 
-        self.term_start = int(term_value[0])
-        self.term_end = int(term_value[1][:4])
+        self.term_start = datetime.datetime(int(term_value[0]), 1, 1, tzinfo=datetime.timezone.utc)
+        self.term_end = datetime.datetime(int(term_value[1][:4]), 1, 1, tzinfo=datetime.timezone.utc)
         self.type = term_value[1][8:]
 
         self._subject_name_cache = {}
@@ -101,19 +101,19 @@ class PupilSemesterReportParser(BaseParser):
         """Returns the name of the grade."""
         return self.cell(9, 1)[7:]
 
-    def get_student_data(self, fetch_subjects: bool = True) -> List[Student]:
+    def get_student_data(self, fetch_subjects: bool = True) -> List[UnifiedPupil]:
         """Returns a list of student objects."""
         students = []
         for row in range(14, self.last_student_row + 1):
             offset = row - 14
-            students.append(Student(
+            students.append(UnifiedPupil(
                 self.cell(2, row),
                 self.get_student_subjects(offset) if fetch_subjects else [],
-                self.get_student_average(offset)
+                Mark(self.get_student_average(offset))
             ))
         return students
 
-    def get_student_subjects(self, student_idx: int) -> List[Subject]:
+    def get_student_subjects(self, student_idx: int) -> List[UnifiedSubject]:
         """Returns a list of student's subject objects."""
         offset = student_idx + 14
         subjects = []
@@ -123,9 +123,9 @@ class PupilSemesterReportParser(BaseParser):
             if name is None:
                 name = self.cell(col, 4)
                 self._subject_name_cache[col] = name
-            subjects.append(Subject(
+            subjects.append(UnifiedSubject(
                 name,
-                self.cell(col, offset)
+                Mark(self.cell(col, offset))
             ))
         return subjects
 
@@ -202,18 +202,18 @@ class PupilPeriodicReportParser(BaseParser):
         """Returns the name of the grade."""
         return self.cell(5, 1)[7:-2] # Remove comma
 
-    def get_student_data(self, fetch_subjects: bool = True) -> List[Student]:
+    def get_student_data(self, fetch_subjects: bool = True) -> List[UnifiedPupil]:
         """Returns a list of student objects."""
         students = []
         for row in range(12, self.last_student_row + 1):
-            students.append(Student(
+            students.append(UnifiedPupil(
                 self.cell(2, row),
                 self.get_student_subjects(row) if fetch_subjects else [],
-                self.get_student_average(row)
+                Mark(self.get_student_average(row))
             ))
         return students
 
-    def get_student_subjects(self, student_row: int) -> List[Subject]:
+    def get_student_subjects(self, student_row: int) -> List[UnifiedSubject]:
         """Returns a list of student's subject objects."""
         subjects = []
         for col in range(4, self.average_mark_column):
@@ -222,9 +222,9 @@ class PupilPeriodicReportParser(BaseParser):
             if name is None:
                 name = self.cell(col, 3)
                 self._subject_name_cache[col] = name
-            subjects.append(Subject(
+            subjects.append(UnifiedSubject(
                 name,
-                self.cell(col, student_row)
+                Mark(self.cell(col, student_row))
             ))
         return subjects
 
