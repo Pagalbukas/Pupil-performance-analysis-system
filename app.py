@@ -25,6 +25,7 @@ from parsing import PupilSemesterReportParser, PupilPeriodicReportParser, Parsin
 from settings import Settings
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
+__VERSION__ = (1, 0, 0)
 REPO_URL = "https://github.com/Pagalbukas/Pupil-performance-analysis-system"
 
 logger = logging.getLogger("analizatorius")
@@ -152,7 +153,9 @@ class MainWidget(QWidget):
         pup_mon_button.clicked.connect(self.app.view_pupil_monthly_selector)
         settings_button.clicked.connect(self.on_settings_button_click)
 
-        notice_label.setText(f"<a href=\"{REPO_URL}\">Dominykas Svetikas © 2022</a>")
+        major, minor, patch = __VERSION__
+
+        notice_label.setText(f"<a href=\"{REPO_URL}\">v.{major}.{minor}.{patch} Dominykas Svetikas © 2022</a>")
         notice_label.setTextFormat(Qt.RichText)
         notice_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
         notice_label.setOpenExternalLinks(True)
