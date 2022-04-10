@@ -154,7 +154,7 @@ class MainWidget(QWidget):
 
         major, minor, patch = __VERSION__
 
-        notice_label.setText(f"<a href=\"{REPO_URL}\">v.{major}.{minor}.{patch} Dominykas Svetikas © 2022</a>")
+        notice_label.setText(f"<a href=\"{REPO_URL}\">v{major}.{minor}.{patch} Dominykas Svetikas © 2022</a>")
         notice_label.setTextFormat(Qt.RichText)
         notice_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
         notice_label.setOpenExternalLinks(True)
