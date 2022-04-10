@@ -131,7 +131,7 @@ class LoginTaskWorker(QObject):
         if len(roles) == 1:
             if not roles[0].is_active:
                 roles[0].change_role()
-                logging.info(f"Paskyros tipas pasirinktas automatiškai į '{roles[0].title}'")
+            logger.info(f"Paskyros tipas pasirinktas automatiškai į '{roles[0].title}'")
         self.success.emit(len(roles) == 1)
 
 class MainWidget(QWidget):
