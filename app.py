@@ -179,8 +179,13 @@ class SelectGraphWidget(QWidget):
         self.app = app
 
         layout = QVBoxLayout()
-        self.label = QLabel("Pasirinkite kokiu būdų norite pateikti nagrinėjamus duomenis")
-        manual_button = QPushButton('Rankiniu būdų')
+        self.label = QLabel((
+            "Pasirinkite kokiu būdų norite pateikti nagrinėjamus duomenis.\n\n"
+            "Nagrinėjamus duomenis galite pateikti:\n"
+            "- pasirenkant vidurkių ataskaitų failus rankiniu būdu;\n"
+            "- leidžiant tai automatiškai padaryti programai, surenkant reikiamas ataskaitas iš 'Mano Dienynas' sistemos."
+        ))
+        manual_button = QPushButton('Rankiniu būdu')
         auto_button = QPushButton('Automatiškai iš \'Mano Dienynas\' sistemos')
         back_button = QPushButton('Grįžti į pradžią')
 
@@ -216,7 +221,7 @@ class PupilSelectionWidget(QWidget):
         self.selected_index: int = None
 
         layout = QVBoxLayout()
-        label = QLabel("Pasirinkite kurį mokinį norite nagrinėti")
+        label = QLabel("Pasirinkite kurį mokinį iš sąrašo norite nagrinėti.")
         self.name_list = QListWidget()
         self.subject_button = QPushButton('Dalykų vidurkiai')
         self.aggregated_button = QPushButton('Bendras vidurkis')
@@ -278,7 +283,10 @@ class LoginWidget(QWidget):
         self.app = app
 
         layout = QVBoxLayout()
-        label = QLabel("Prisijungkite prie 'Mano Dienynas' sistemos")
+        label = QLabel((
+            "Prisijungkite prie 'Mano Dienynas' sistemos.\n"
+            "Naudokite tokius pat duomenis, kuriuos naudotumėte prisijungiant per naršyklę."
+        ))
         self.username_field = QLineEdit()
         self.username_field.setPlaceholderText("Jūsų el. paštas")
         self.password_field = QLineEdit()
@@ -379,7 +387,7 @@ class SelectUserRoleWidget(QWidget):
         self.selected_index: int = None
 
         layout = QVBoxLayout()
-        label = QLabel("Pasirinkite vartotojo tipą")
+        label = QLabel("Pasirinkite vartotojo tipą. Jis bus naudojamas pasirinkti nagrinėjamai klasei.")
         self.role_list = QListWidget()
         self.select_button = QPushButton('Pasirinkti')
         self.back_button = QPushButton('Atsijungti ir grįžti į pradžią')
@@ -465,7 +473,7 @@ class SelectClassWidget(QWidget):
         self.selected_index: int = None
 
         layout = QVBoxLayout()
-        label = QLabel("Pasirinkite klasę")
+        label = QLabel("Pasirinkite nagrinėjamą klasę.")
         self.class_list = QListWidget()
         self.classes = []
         self.semester_button = QPushButton('Trimestrų/pusmečių')
