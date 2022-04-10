@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QLabel, QPushButton,
     QLineEdit, QCheckBox
 )
-from PySide6.QtGui import QScreen, QKeyEvent
+from PySide6.QtGui import QScreen, QIcon, QKeyEvent
 from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
 from typing import List, Tuple
 
@@ -685,6 +685,7 @@ class App(QWidget):
         self.view_aggregated = False
 
         self.setWindowTitle('Mokinių pasiekimų analizatorius')
+        self.setWindowIcon(QIcon('icon.png'))
 
         self.left = 10
         self.top = 10

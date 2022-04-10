@@ -7,7 +7,10 @@ block_cipher = None
 a = Analysis(['main.py'],
              pathex=[],
              binaries=[],
-             datas=[('data/ignoruoti_dalykai.txt', 'data')],
+             datas=[
+                 ('data/ignoruoti_dalykai.txt', 'data'),
+                 ('icon.png', '.')
+             ],
              hiddenimports=[],
              hookspath=[],
              hooksconfig={},
@@ -30,6 +33,7 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           console=False,
+          icon='icon.ico'
           disable_windowed_traceback=False,
           target_arch=None,
           codesign_identity=None,

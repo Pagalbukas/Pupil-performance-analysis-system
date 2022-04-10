@@ -6,7 +6,7 @@
 
 !define APP_NAME "Analizatorius"
 !define COMP_NAME "Dominykas Svetikas"
-!define VERSION "1.0.0.0"
+!define VERSION "1.0.1.0"
 !define COPYRIGHT "Dominykas Svetikas © 2022"
 !define DESCRIPTION "Application"
 !define INSTALLER_NAME "Analizatorius.exe"
@@ -91,6 +91,7 @@ Section -MainProgram
 ${INSTALL_TYPE}
 SetOverwrite ifnewer
 SetOutPath "$INSTDIR"
+File "dist\main\icon.png"
 File "dist\main\api-ms-win-core-console-l1-1-0.dll"
 File "dist\main\api-ms-win-core-datetime-l1-1-0.dll"
 File "dist\main\api-ms-win-core-debug-l1-1-0.dll"
@@ -1524,6 +1525,7 @@ SectionEnd
 
 Section Uninstall
 ${INSTALL_TYPE}
+Delete "$INSTDIR\icon.png"
 Delete "$INSTDIR\api-ms-win-core-console-l1-1-0.dll"
 Delete "$INSTDIR\api-ms-win-core-datetime-l1-1-0.dll"
 Delete "$INSTDIR\api-ms-win-core-debug-l1-1-0.dll"
