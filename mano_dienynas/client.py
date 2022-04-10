@@ -173,7 +173,9 @@ class Client:
         roles = self.get_user_roles()
         return [
             r for r in roles
-            if r.title == "Klasės vadovas" or r.title == "Sistemos administratorius"
+            if r.title == "Klasės vadovas"
+            or r.title == "Sistemos administratorius"
+            or r.title == "Administracija"
         ]
 
     def get_user_roles(self) -> List[UserRole]:
