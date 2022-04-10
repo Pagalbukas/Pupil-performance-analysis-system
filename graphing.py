@@ -257,7 +257,7 @@ class UnifiedClassAveragesGraph(G):
         first_summary_year = self.summaries[0].term_start.year
         last_summary_year = self.summaries[-1].term_end.year
 
-        self.title = self.summaries[-1].grade_name + " mokinių bendri vidurkiai\n"
+        self.title = self.summaries[-1].grade_name + " bendri mokinių vidurkiai\n"
         if first_summary_year == last_summary_year:
             self.title += str(first_summary_year)
         else:
