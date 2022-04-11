@@ -139,10 +139,17 @@ class Client:
         self.logout()
         return False
 
-    def request(self, method: str, url: str, data: dict = None, no_cookies: bool = False) -> Response:
+    def request(
+        self,
+        method: str,
+        url: str,
+        data: dict = None,
+        no_cookies: bool = False,
+        timeout: Optional[int] = 30
+    ) -> Response:
         if no_cookies:
-            return requests.request(method, url, data=data, headers=self.HEADERS)
-        return requests.request(method, url, data=data, headers=self.HEADERS, cookies=self.cookies)
+            return requests.request(method, url, data=data, headers=self.HEADERS, timeout=timeout)
+        return requests.request(method, url, data=data, headers=self.HEADERS, cookies=self.cookies, timeout=timeout)
 
     def logout(self) -> None:
         """Destroys the client session and clears cache."""
@@ -273,7 +280,7 @@ class Client:
             if timestamp - 60 * 60 * 24 * 7 > os.path.getmtime(file_path):
                 os.remove(file_path)
                 continue
-            
+
             # Handle still potentially cached files
             split = file.split("_")
             f_class_id, period_start, period_end, time_generated = split
@@ -286,7 +293,10 @@ class Client:
         file_name = f'{class_id}_{date_from}_{date_to}_{int(timestamp)}.xls'
         file_path = os.path.join(get_temp_dir(), file_name)
 
-        request = self.request("POST", self.BASE_URL + f"/1/lt/page/report/choose_normal/12/{class_id}", req_dict)
+        request = self.request(
+            "POST", self.BASE_URL + f"/1/lt/page/report/choose_normal/12/{class_id}",
+            req_dict, timeout=60
+        )
         with open(file_path, "wb") as f:
             f.write(request.content)
         return file_path
