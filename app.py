@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QScreen, QIcon, QKeyEvent
 from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
+from requests.exceptions import RequestException
 from typing import List, Tuple
 
 from files import get_data_dir, get_log_file
@@ -62,6 +63,7 @@ class GenerateReportWorker(QObject):
                 self.progress.emit((total, i + 1))
                 files.append(file)
         except Exception as e:
+            logger.exception(e)
             return self.error.emit(str(e))
         self.success.emit(files)
 
@@ -76,6 +78,7 @@ class GenerateReportWorker(QObject):
                 self.progress.emit((total, i + 1))
                 files.append(file)
         except Exception as e:
+            logger.exception(e)
             return self.error.emit(str(e))
         self.success.emit(files)
 
@@ -93,6 +96,7 @@ class ChangeRoleWorker(QObject):
         try:
             self.app.client.get_filtered_user_roles()[self.index].change_role()
         except Exception as e:
+            logger.exception(e)
             return self.error.emit(str(e))
         self.success.emit()
 
@@ -108,10 +112,23 @@ class LoginTaskWorker(QObject):
 
     @Slot()
     def login(self):
+        # Should never be called
         if self.app.client.is_logged_in:
             return self.error.emit("Vartotojas jau prisijungęs, pala, ką?")
 
-        logged_in = self.app.client.login(self.username, self.password)
+        # Do the actual login request
+        try:
+            logged_in = self.app.client.login(self.username, self.password)
+        except RequestException as e:
+            logger.exception(e)
+            return self.error.emit((
+                "Prisijungiant įvyko nenumatyta prašymo klaida.\n"
+                "Patikrinkite savo interneto ryšį ir bandykite dar kartą vėliau."
+            ))
+        except Exception as e:
+            logger.exception(e)
+            return self.error.emit(str(e))
+
         if not logged_in:
             return self.error.emit("Prisijungimas nepavyko, patikrinkite ar suvesti teisingi duomenys")
 
@@ -120,7 +137,18 @@ class LoginTaskWorker(QObject):
         self.app.settings.save()
 
         # Obtain filtered roles while at it and verify that user has the rights
-        roles = self.app.client.get_filtered_user_roles()
+        try:
+            roles = self.app.client.get_filtered_user_roles()
+        except RequestException as e:
+            logger.exception(e)
+            return self.error.emit((
+                "Prisijungiant įvyko nenumatyta prašymo klaida.\n"
+                "Patikrinkite savo interneto ryšį ir bandykite dar kartą vėliau."
+            ))
+        except Exception as e:
+            logger.exception(e)
+            return self.error.emit(str(e))
+
         if len(roles) == 0:
             self.app.client.logout()
             return self.error.emit(
@@ -130,7 +158,17 @@ class LoginTaskWorker(QObject):
 
         if len(roles) == 1:
             if not roles[0].is_active:
-                roles[0].change_role()
+                try:
+                    roles[0].change_role()
+                except RequestException as e:
+                    logger.exception(e)
+                    return self.error.emit((
+                        "Prisijungiant įvyko nenumatyta prašymo klaida.\n"
+                        "Patikrinkite savo interneto ryšį ir bandykite dar kartą vėliau."
+                    ))
+                except Exception as e:
+                    logger.exception(e)
+                    return self.error.emit(str(e))
             logger.info(f"Paskyros tipas pasirinktas automatiškai į '{roles[0].title}'")
         self.success.emit(len(roles) == 1)
 
@@ -258,14 +296,22 @@ class PupilSelectionWidget(QWidget):
     def display_subjects_graph(self) -> None:
         if self.selected_index is None:
             return
-        graph = PupilSubjectPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
-        graph.display(use_experimental_legend=True)
+        try:
+            graph = PupilSubjectPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
+            graph.display(use_experimental_legend=True)
+        except Exception as e:
+            logger.exception(e)
+            return self.app.show_error_box(str(e))
 
     def display_aggregated_graph(self) -> None:
         if self.selected_index is None:
             return
-        graph = PupilPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
-        graph.display(use_experimental_legend=True)
+        try:
+            graph = PupilPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
+            graph.display(use_experimental_legend=True)
+        except Exception as e:
+            logger.exception(e)
+            return self.app.show_error_box(str(e))
 
     def update_data(self, summaries: List[ClassPeriodReportSummary]) -> None:
         """Updates widget data."""
@@ -550,14 +596,13 @@ class SelectClassWidget(QWidget):
         """Callback of GenerateReportWorker thread on success."""
         self.progress_dialog.hide()
         self.worker_thread.quit()
-        try:
-            sums = self.app.generate_periodic_summaries(file_paths)
-            sums.sort(key=lambda s: (s.term_start))
-            if self.app.view_aggregated:
-                return self.app.display_aggregated_monthly_graph(sums)
-            self.app.display_pupil_monthly_graph_selector(sums)
-        except Exception as e:
-            return self.propagate_error(str(e))
+        sums = self.app.generate_periodic_summaries(file_paths)
+        sums.sort(key=lambda s: (s.term_start))
+        if self.app.view_aggregated:
+            self.app.display_aggregated_monthly_graph(sums)
+            return self.enable_gui()
+        self.app.display_pupil_monthly_graph_selector(sums)
+        self.enable_gui()
 
     def update_data(self) -> None:
         self.enable_gui()
@@ -861,12 +906,20 @@ class App(QWidget):
         self.display_aggregated_semester_graph(summaries)
 
     def display_aggregated_semester_graph(self, summaries: List[ClassSemesterReportSummary]) -> None:
-        graph = UnifiedClassAveragesGraph(self, summaries)
-        graph.display(use_experimental_legend=True)
+        try:
+            graph = UnifiedClassAveragesGraph(self, summaries)
+            graph.display(use_experimental_legend=True)
+        except Exception as e:
+            logger.exception(e)
+            return self.show_error_box(str(e))
 
     def display_aggregated_monthly_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
-        graph = UnifiedClassAveragesGraph(self, summaries)
-        graph.display(use_experimental_legend=True)
+        try:
+            graph = UnifiedClassAveragesGraph(self, summaries)
+            graph.display(use_experimental_legend=True)
+        except Exception as e:
+            logger.exception(e)
+            return self.show_error_box(str(e))
         self.go_to_back()
 
     def display_pupil_monthly_graph_selector(self, summaries: List[ClassPeriodReportSummary]):
