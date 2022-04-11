@@ -537,6 +537,10 @@ class SelectClassWidget(QWidget):
     def on_progress_signal(self, data: Tuple[int, int]) -> None:
         """Callback of GenerateReportWorker thread on success."""
         total, curr = data
+
+        if self.progress_dialog is None:
+            self._create_progress_dialog()
+
         if not self.progress_dialog.isVisible():
             self.progress_dialog.show()
         self.progress_dialog.setRange(0, total)
@@ -577,7 +581,6 @@ class SelectClassWidget(QWidget):
         self.worker.success.connect(self.on_success_signal)
         self.worker.progress.connect(self.on_progress_signal)
         self.worker_thread.started.connect(self.worker.generate_periodic)
-        self._create_progress_dialog()
         self.worker_thread.start()
 
     def generate_monthly_reports(self) -> None:
@@ -590,7 +593,6 @@ class SelectClassWidget(QWidget):
         self.worker.success.connect(self.on_success_signal)
         self.worker.progress.connect(self.on_progress_signal)
         self.worker_thread.started.connect(self.worker.generate_monthly)
-        self._create_progress_dialog()
         self.worker_thread.start()
 
 
