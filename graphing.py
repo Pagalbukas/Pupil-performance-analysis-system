@@ -105,12 +105,12 @@ class BaseGraph:
     ) -> None:
         """Instructs matplotlib to display a graph."""
 
-        # Create a plot and a figure
-        fig, ax = plt.subplots()
-
         # Store data into local variables for mutation
         x_values, y_values = self.acquire_axes()
         x_count, y_count = (len(x_values), len(y_values))
+
+        # Create a plot and a figure
+        fig, ax = plt.subplots()
 
         # Set unique colors for lines in a rainbow fashion
         cm = plt.get_cmap('gist_rainbow')
@@ -264,7 +264,7 @@ class UnifiedClassAveragesGraph(G):
             self.title += f'{first_summary_year} - {last_summary_year}'
 
         for i, summary in enumerate(self.summaries):
-            logger.info(f"Nagrinėjamas ({summary.full_representable_name})")
+            logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
             for pupil in summary.pupils:
                 # If student name is not in cache, ignore them
                 if pupil.name not in pupil_names:
@@ -428,4 +428,6 @@ class PupilSubjectPeriodicAveragesGraph(AbstractPupilAveragesGraph):
             if marks == [None] * len(marks):
                 continue
             values.append(GraphValue(name, marks))
+        if len(values) == 0:
+            raise RuntimeError("Mokinys neturi jokių pažymių, kad būtų galima piešti grafiką!")
         return values
