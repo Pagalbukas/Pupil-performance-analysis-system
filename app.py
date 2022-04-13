@@ -20,7 +20,10 @@ from requests.exceptions import RequestException
 from typing import List, Tuple
 
 from files import get_data_dir, get_log_file
-from graphing import PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph, UnifiedClassAveragesGraph
+from graphing import (
+    PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
+    UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph
+)
 from mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class
 from parsing import PupilSemesterReportParser, PupilPeriodicReportParser, ParsingError
 from settings import Settings
@@ -182,12 +185,14 @@ class MainWidget(QWidget):
         layout = QVBoxLayout()
         agg_sem_button = QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
         agg_mon_button = QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
+        att_mon_button = QPushButton('Bendra klasės lankomumo ataskaita pagal laikotarpį')
         pup_mon_button = QPushButton('Individualizuota mokinio vidurkių ataskaita pagal laikotarpį')
         settings_button = QPushButton('Nustatymai')
         notice_label = QLabel()
 
         agg_sem_button.clicked.connect(self.app.view_aggregated_semester_graph)
         agg_mon_button.clicked.connect(self.app.view_aggregated_monthly_selector)
+        att_mon_button.clicked.connect(self.app.view_attendance_monthly_selector)
         pup_mon_button.clicked.connect(self.app.view_pupil_monthly_selector)
         settings_button.clicked.connect(self.on_settings_button_click)
 
@@ -202,6 +207,7 @@ class MainWidget(QWidget):
         # Took longer than aligning a div in CSS
         layout.addWidget(agg_sem_button, alignment=Qt.AlignVCenter)
         layout.addWidget(agg_mon_button, alignment=Qt.AlignVCenter)
+        layout.addWidget(att_mon_button, alignment=Qt.AlignVCenter)
         layout.addWidget(pup_mon_button, alignment=Qt.AlignVCenter)
         layout.addWidget(settings_button, alignment=Qt.AlignVCenter)
         layout.addWidget(notice_label, alignment=Qt.AlignRight | Qt.AlignBottom | Qt.AlignJustify)
@@ -263,6 +269,7 @@ class PupilSelectionWidget(QWidget):
         label = QLabel("Pasirinkite kurį mokinį iš sąrašo norite nagrinėti.")
         self.name_list = QListWidget()
         self.subject_button = QPushButton('Dalykų vidurkiai')
+        self.attendance_button = QPushButton('Lankomumas')
         self.aggregated_button = QPushButton('Bendras vidurkis')
         back_button = QPushButton('Grįžti į pradžią')
 
@@ -273,18 +280,21 @@ class PupilSelectionWidget(QWidget):
                 return
             index = indexes[0].row()
             self.subject_button.setEnabled(True)
+            self.attendance_button.setEnabled(True)
             self.aggregated_button.setEnabled(True)
             self.selected_index = index
 
         # Bind the events
         self.name_list.itemSelectionChanged.connect(select_name)
         self.subject_button.clicked.connect(self.display_subjects_graph)
+        self.attendance_button.clicked.connect(self.display_attendance_graph)
         self.aggregated_button.clicked.connect(self.display_aggregated_graph)
         back_button.clicked.connect(self.app.go_to_back)
 
         layout.addWidget(label)
         layout.addWidget(self.name_list)
         layout.addWidget(self.subject_button)
+        layout.addWidget(self.attendance_button)
         layout.addWidget(self.aggregated_button)
         layout.addWidget(back_button)
         self.setLayout(layout)
@@ -292,6 +302,7 @@ class PupilSelectionWidget(QWidget):
     def disable_buttons(self) -> None:
         """Disables per-subject or aggregated graph buttons."""
         self.subject_button.setEnabled(False)
+        self.attendance_button.setEnabled(False)
         self.aggregated_button.setEnabled(False)
 
     def display_subjects_graph(self) -> None:
@@ -299,6 +310,16 @@ class PupilSelectionWidget(QWidget):
             return
         try:
             graph = PupilSubjectPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
+            graph.display(use_experimental_legend=True)
+        except Exception as e:
+            logger.exception(e)
+            return self.app.show_error_box(str(e))
+
+    def display_attendance_graph(self) -> None:
+        if self.selected_index is None:
+            return
+        try:
+            graph = PupilPeriodicAttendanceGraph(self.app, self.summaries, self.selected_index)
             graph.display(use_experimental_legend=True)
         except Exception as e:
             logger.exception(e)
@@ -599,6 +620,9 @@ class SelectClassWidget(QWidget):
         self.worker_thread.quit()
         sums = self.app.generate_periodic_summaries(file_paths)
         sums.sort(key=lambda s: (s.term_start))
+        if self.app.view_attendance:
+            self.app.display_attendance_monthly_graph(sums)
+            return self.enable_gui()
         if self.app.view_aggregated:
             self.app.display_aggregated_monthly_graph(sums)
             return self.enable_gui()
@@ -739,6 +763,7 @@ class App(QWidget):
             logger.debug(f"Loaded modules: {list(sys.modules.keys())}")
 
         self.view_aggregated = False
+        self.view_attendance = False
 
         self.setWindowTitle('Mokinių pasiekimų analizatorius')
         self.setWindowIcon(QIcon('icon.png'))
@@ -777,6 +802,7 @@ class App(QWidget):
     def go_to_back(self) -> None:
         """Return to the main widget."""
         self.view_aggregated = False
+        self.view_attendance = False
         self.change_stack(self.MAIN_WIDGET)
 
     def change_stack(self, index: int) -> None:
@@ -790,6 +816,10 @@ class App(QWidget):
 
     def view_aggregated_monthly_selector(self):
         self.view_aggregated = True
+        self.change_stack(self.SELECT_GRAPH_DATA_WIDGET)
+
+    def view_attendance_monthly_selector(self):
+        self.view_attendance = True
         self.change_stack(self.SELECT_GRAPH_DATA_WIDGET)
 
     def view_pupil_monthly_selector(self):
@@ -807,6 +837,8 @@ class App(QWidget):
 
         # Sort summaries by term start, ascending (YYYY-MM-DD)
         summaries.sort(key=lambda s: (s.term_start))
+        if self.view_attendance:
+            return self.display_attendance_monthly_graph(summaries)
         if self.view_aggregated:
             return self.display_aggregated_monthly_graph(summaries)
         self.display_pupil_monthly_graph_selector(summaries)
@@ -917,6 +949,15 @@ class App(QWidget):
     def display_aggregated_monthly_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
         try:
             graph = UnifiedClassAveragesGraph(self, summaries)
+            graph.display(use_experimental_legend=True)
+        except Exception as e:
+            logger.exception(e)
+            return self.show_error_box(str(e))
+        self.go_to_back()
+
+    def display_attendance_monthly_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
+        try:
+            graph = UnifiedClassAttendanceGraph(self, summaries)
             graph.display(use_experimental_legend=True)
         except Exception as e:
             logger.exception(e)

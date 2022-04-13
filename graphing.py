@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import matplotlib
 import os
 import logging
@@ -17,7 +18,7 @@ from matplotlib.backends.qt_compat import QtWidgets, _getSaveFileName # type: ig
 from matplotlib.backends.backend_qt import NavigationToolbar2QT # type: ignore # noqa: E402
 from matplotlib.legend_handler import HandlerLine2D # noqa: E402
 from matplotlib.lines import Line2D # noqa: E402
-from typing import TYPE_CHECKING # noqa: E402
+from typing import TYPE_CHECKING, Union # noqa: E402
 
 if TYPE_CHECKING:
     from app import App
@@ -243,38 +244,15 @@ class G(BaseGraph):
         return (self.period_names, self.get_graph_values())
 
 
-class UnifiedClassAveragesGraph(G):
-    """A unified aggregated class averages graph."""
+class UnifiedClassGraph(G):
+    """A unified aggregated class graph."""
 
     def __init__(self, app: App, summaries: List[BaseClassReportSummary]) -> None:
         self.pupils = {}
         super().__init__(app, summaries)
 
     def _load(self) -> None:
-        pupil_names = [s.name for s in self.summaries[-1].pupils]
-
-        # Determine graph title
-        first_summary_year = self.summaries[0].term_start.year
-        last_summary_year = self.summaries[-1].term_end.year
-
-        self.title = self.summaries[-1].grade_name + " bendri mokinių vidurkiai\n"
-        if first_summary_year == last_summary_year:
-            self.title += str(first_summary_year)
-        else:
-            self.title += f'{first_summary_year} - {last_summary_year}'
-
-        for i, summary in enumerate(self.summaries):
-            logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
-            for pupil in summary.pupils:
-                # If student name is not in cache, ignore them
-                if pupil.name not in pupil_names:
-                    logger.warn(f"Mokinys '{pupil.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
-                    continue
-
-                if self.app.settings.flip_names:
-                    self._get_pupil_object(pupil.sane_name)[i] = pupil.average.clean
-                else:
-                    self._get_pupil_object(pupil.name)[i] = pupil.average.clean
+        raise NotImplementedError
 
     @property
     def period_names(self) -> List[str]:
@@ -314,6 +292,77 @@ class UnifiedClassAveragesGraph(G):
         if self.app.settings.hide_names:
             self._anonymize_pupil_names()
         return (self.period_names, self.get_graph_values())
+
+
+class UnifiedClassAveragesGraph(UnifiedClassGraph):
+    """A unified aggregated class averages graph."""
+
+    def __init__(self, app: App, summaries: List[BaseClassReportSummary]) -> None:
+        self.pupils = {}
+        super().__init__(app, summaries)
+
+    def _load(self) -> None:
+        pupil_names = [s.name for s in self.summaries[-1].pupils]
+
+        # Determine graph title
+        first_summary_year = self.summaries[0].term_start.year
+        last_summary_year = self.summaries[-1].term_end.year
+
+        self.title = self.summaries[-1].grade_name + " bendri mokinių vidurkiai\n"
+        if first_summary_year == last_summary_year:
+            self.title += str(first_summary_year)
+        else:
+            self.title += f'{first_summary_year} - {last_summary_year}'
+
+        for i, summary in enumerate(self.summaries):
+            logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
+            for pupil in summary.pupils:
+                # If student name is not in cache, ignore them
+                if pupil.name not in pupil_names:
+                    logger.warn(f"Mokinys '{pupil.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
+                    continue
+
+                if self.app.settings.flip_names:
+                    self._get_pupil_object(pupil.sane_name)[i] = pupil.average.clean
+                else:
+                    self._get_pupil_object(pupil.name)[i] = pupil.average.clean
+
+class UnifiedClassAttendanceGraph(UnifiedClassGraph):
+    """A unified aggregated class attendance graph."""
+
+    def __init__(self, app: App, summaries: List[BaseClassReportSummary]) -> None:
+        self.pupils = {}
+        super().__init__(app, summaries)
+
+    def _load(self) -> None:
+        pupil_names = [s.name for s in self.summaries[-1].pupils]
+
+        # Determine graph title
+        first_summary_year = self.summaries[0].term_start.year
+        last_summary_year = self.summaries[-1].term_end.year
+
+        self.title = self.summaries[-1].grade_name + " praleistų pamokų kiekis\n"
+        if first_summary_year == last_summary_year:
+            self.title += str(first_summary_year)
+        else:
+            self.title += f'{first_summary_year} - {last_summary_year}'
+
+        for i, summary in enumerate(self.summaries):
+            logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
+            for pupil in summary.pupils:
+                # If student name is not in cache, ignore them
+                if pupil.name not in pupil_names:
+                    logger.warn(f"Mokinys '{pupil.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
+                    continue
+
+                if self.app.settings.flip_names:
+                    self._get_pupil_object(pupil.sane_name)[i] = pupil.attendance["total_missed"]
+                else:
+                    self._get_pupil_object(pupil.name)[i] = pupil.attendance["total_missed"]
+
+    def set_labels(self, ax) -> None:
+        ax.set_ylabel('Praleistų pamokų kiekis')
+        ax.set_xlabel('Laikotarpis')
 
 class AbstractPupilAveragesGraph(G):
     """A unified abstract class pupil averages graph."""
@@ -380,6 +429,64 @@ class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):
         if self.graph_class:
             values.append(GraphValue("Klasės vidurkis", self._compute_class_averages()))
         return values
+
+    def display(
+        self,
+        use_styled_colouring: bool = True,
+        use_experimental_legend: bool = False,
+        show_class_average: bool = True
+    ) -> None:
+        self.graph_class = show_class_average
+        return super().display(use_styled_colouring, use_experimental_legend)
+
+class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
+    """This class implements pupil periodic attendance graph."""
+
+    def __init__(self, app: App, summaries: List[ClassPeriodReportSummary], pupil_idx: int) -> None:
+        self.pupil_idx = pupil_idx
+        self.pupils = summaries[-1].pupils
+        self.pupil_averages: List[List[Optional[float]]] = [
+            [None for _ in range(len(summaries))] for _ in range(len(self.pupils))
+        ]
+        super().__init__(app, summaries)
+
+    def _load(self) -> None:
+        name = self.pupils[self.pupil_idx].name
+        if self.app.settings.flip_names:
+            name = self.pupils[self.pupil_idx].sane_name
+
+        self.title = f"{name} praleistų pamokų kiekis\n{self.period}"
+        for i, summary in enumerate(self.summaries):
+            logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
+            for j, pupil in enumerate(summary.pupils):
+                self.pupil_averages[j][i] = pupil.attendance["total_missed"]
+
+    def _compute_class_averages(self) -> List[Optional[float]]:
+
+        def clean_round(raw_float: float) -> Union[float, int]:
+            rounded = round(raw_float, 2)
+            if str(rounded).split(".")[1] == "0":
+                return math.trunc(rounded)
+            return rounded
+
+        averages = [[0, 0] for _ in range(len(self.period_names))]
+        for pupil in self.pupil_averages:
+            for i, average in enumerate(pupil):
+                if average is not None:
+                    averages[i][0] += average
+                    averages[i][1] += 1
+        return [clean_round(s / t) for s, t in averages]
+
+    def get_graph_values(self) -> List[GraphValue]:
+        """Returns a list of GraphValues which represent pupil averages."""
+        values = [GraphValue("Mokinio kiekis", self.pupil_averages[self.pupil_idx])]
+        if self.graph_class:
+            values.append(GraphValue("Klasės vidurkis", self._compute_class_averages()))
+        return values
+
+    def set_labels(self, ax) -> None:
+        ax.set_ylabel('Praleistų pamokų kiekis')
+        ax.set_xlabel('Laikotarpis')
 
     def display(
         self,
