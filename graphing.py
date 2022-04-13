@@ -369,7 +369,10 @@ class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):
                 if average is not None:
                     averages[i][0] += average
                     averages[i][1] += 1
-        return [round(s / t, 2) for s, t in averages]
+        try:
+            return [round(s / t, 2) for s, t in averages]
+        except ZeroDivisionError:
+            raise RuntimeError("Klasė neturi jokių pažymių, kad būtų galima piešti grafiką!")
 
     def get_graph_values(self) -> List[GraphValue]:
         """Returns a list of GraphValues which represent pupil averages."""
