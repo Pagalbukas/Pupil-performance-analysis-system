@@ -5,6 +5,7 @@ import sys
 import timeit
 import logging
 
+from logging.handlers import RotatingFileHandler
 from PySide6.QtWidgets import (
     QApplication,
     QVBoxLayout, QFormLayout,
@@ -33,7 +34,7 @@ logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter('[%(asctime)s %(name)s:%(levelname)s]: %(message)s', "%Y-%m-%d %H:%M:%S")
 
-fh = logging.FileHandler(get_log_file(), encoding="utf-8")
+fh = RotatingFileHandler(get_log_file(), encoding="utf-8", maxBytes=1024 * 512, backupCount=10)
 fh.setFormatter(formatter)
 fh.setLevel(logging.INFO)
 ch = logging.StreamHandler()
