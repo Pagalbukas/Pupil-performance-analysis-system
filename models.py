@@ -1,10 +1,16 @@
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import List, Optional, TypedDict, Union
 
 from files import get_ignored_item_filters
 
 IGNORED_ITEM_FILTERS = get_ignored_item_filters()
+
+class AttendanceDict(TypedDict):
+    total_missed: int
+    justified_due_illness: int
+    justified_due_other: int
+    not_justified: int
 
 class SubjectNames:
     """This class contains constants for subject names."""
@@ -172,10 +178,11 @@ class UnifiedSubject:
 
 class UnifiedPupil:
 
-    def __init__(self, name: str, subjects: List[UnifiedSubject], average: Mark) -> None:
+    def __init__(self, name: str, subjects: List[UnifiedSubject], average: Mark, attendance: AttendanceDict) -> None:
         self.name = name
         self.subjects = subjects
         self.average = average
+        self.attendance = attendance
 
     def __repr__(self) -> str:
         return f'<UnifiedPupil name="{self.name}" average={self.average} subjects={len(self.subjects)}>'
