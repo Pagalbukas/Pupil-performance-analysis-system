@@ -7,9 +7,19 @@ from models import AttendanceDict, Mark, UnifiedPupil, UnifiedSubject
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
 class ParsingError(Exception):
-
     def __init__(self, message: str) -> None:
         super().__init__(message)
+
+class InvalidResourceTypeError(ParsingError):
+    def __init__(self) -> None:
+        super().__init__("Pateiktas ataskaitos tipas yra netinkamas!")
+
+class InconclusiveResourceError(ParsingError):
+    def __init__(self) -> None:
+        super().__init__((
+            "Trūksta duomenų, suvestinė yra nepilna. "
+            "Įsitikinkite, ar pusmečio/trimestro įvertinimai yra teisingi!"
+        ))
 
 class BaseParser:
 
@@ -181,14 +191,11 @@ class PupilSemesterReportParser(BaseParser):
         # Check whether Excel file is of correct type
         # TODO: investigate future proofing
         if self.cell(1, 2) != "Ataskaita: Mokinių pasiekimų ir lankomumo suvestinė":
-            raise ParsingError("Pateiktas ataskaitos tipas yra netinkamas")
+            raise InvalidResourceTypeError
 
         # Check whether group average is a zero, if it is, throw parsing error due to incomplete file
         if self.cell(self.average_mark_column, self.last_pupil_row + 1) == 0:
-            raise ParsingError((
-                "Trūksta duomenų, suvestinė yra nepilna."
-                " Įsitikinkite ar pusmetis/trimestras yra tikrai ir pilnai išvestas!"
-            ))
+            raise InconclusiveResourceError
 
         return ClassSemesterReportSummary(
             self.get_grade_name(),
@@ -263,14 +270,11 @@ class PupilPeriodicReportParser(BaseParser):
         # Check whether Excel file is of correct type
         # TODO: investigate future proofing
         if self.cell(1, 1)[:-1] != "Ataskaita: Mokinių vidurkių suvestinė":
-            raise ParsingError("Pateiktas ataskaitos tipas yra netinkamas")
+            raise InvalidResourceTypeError
 
         # Check whether group average is a zero, if it is, throw parsing error due to incomplete file
         if self.cell(self.average_mark_column, self.last_pupil_row + 1) == 0:
-            raise ParsingError((
-                "Trūksta duomenų, suvestinė yra nepilna."
-                " Įsitikinkite ar pusmetis/trimestras yra tikrai ir pilnai išvestas!"
-            ))
+            raise InconclusiveResourceError
 
         return ClassPeriodReportSummary(
             self.get_grade_name(),

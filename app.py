@@ -134,7 +134,7 @@ class LoginTaskWorker(QObject):
             return self.error.emit(str(e))
 
         if not logged_in:
-            return self.error.emit("Prisijungimas nepavyko, patikrinkite ar suvesti teisingi duomenys")
+            return self.error.emit("Prisijungimas nepavyko, patikrinkite, ar duomenys suvesti teisingai!")
 
         # Save the username since login was successful
         self.app.settings.username = self.username
@@ -225,10 +225,10 @@ class SelectGraphWidget(QWidget):
 
         layout = QVBoxLayout()
         self.label = QLabel((
-            "Pasirinkite kokiu būdų norite pateikti nagrinėjamus duomenis.\n\n"
+            "Pasirinkite, kokiu būdu norite pateikti nagrinėjamus duomenis.\n\n"
             "Nagrinėjamus duomenis galite pateikti:\n"
             "- pasirenkant vidurkių ataskaitų failus rankiniu būdu;\n"
-            "- leidžiant tai automatiškai padaryti programai, surenkant reikiamas ataskaitas iš 'Mano Dienynas' sistemos."
+            "- leidžiant tai automatiškai padaryti programai, kuri surinks reikiamas ataskaitas iš 'Mano Dienynas' sistemos."
         ))
         manual_button = QPushButton('Rankiniu būdu')
         auto_button = QPushButton('Automatiškai iš \'Mano Dienynas\' sistemos')
@@ -266,7 +266,7 @@ class PupilSelectionWidget(QWidget):
         self.selected_index: int = None
 
         layout = QVBoxLayout()
-        label = QLabel("Pasirinkite kurį mokinį iš sąrašo norite nagrinėti.")
+        label = QLabel("Pasirinkite, kurį mokinį iš sąrašo norite nagrinėti.")
         self.name_list = QListWidget()
         self.subject_button = QPushButton('Dalykų vidurkiai')
         self.attendance_button = QPushButton('Lankomumas')
@@ -353,7 +353,7 @@ class LoginWidget(QWidget):
         layout = QVBoxLayout()
         label = QLabel((
             "Prisijungkite prie 'Mano Dienynas' sistemos.\n"
-            "Naudokite tokius pat duomenis, kuriuos naudotumėte prisijungiant per naršyklę."
+            "Naudokite tokius pat duomenis, kuriuos naudotumėte prisijungdami per naršyklę."
         ))
         self.username_field = QLineEdit()
         self.username_field.setPlaceholderText("Jūsų el. paštas")
@@ -433,7 +433,7 @@ class LoginWidget(QWidget):
         password = self.password_field.text()
 
         if username.strip() == "" or password.strip() == "":
-            return self.propagate_error("Įveskite prisijungimo duomenis")
+            return self.propagate_error("Įveskite prisijungimo duomenis!")
 
         self.disable_gui()
         self.login_worker = LoginTaskWorker(self.app, username, password)
@@ -455,7 +455,7 @@ class SelectUserRoleWidget(QWidget):
         self.selected_index: int = None
 
         layout = QVBoxLayout()
-        label = QLabel("Pasirinkite vartotojo tipą. Jis bus naudojamas pasirinkti nagrinėjamai klasei.")
+        label = QLabel("Pasirinkite vartotojo tipą. Jis bus naudojamas nagrinėjamai klasei pasirinkti.")
         self.role_list = QListWidget()
         self.select_button = QPushButton('Pasirinkti')
         self.back_button = QPushButton('Atsijungti ir grįžti į pradžią')
@@ -544,8 +544,8 @@ class SelectClassWidget(QWidget):
         label = QLabel("Pasirinkite nagrinėjamą klasę.")
         self.class_list = QListWidget()
         self.classes = []
-        self.semester_button = QPushButton('Trimestrų/pusmečių')
-        self.monthly_button = QPushButton('Mėnesinė')
+        self.semester_button = QPushButton('Generuoti trimestrų/pusmečių ataskaitas')
+        self.monthly_button = QPushButton('Generuoti mėnesines ataskaitas')
         self.back_button = QPushButton('Grįžti į pradžią')
         self.progress_dialog = None
 
@@ -881,7 +881,7 @@ class App(QWidget):
             summaries.append(summary)
 
         if len(summaries) == 0:
-            logger.error("Nerasta jokios tinkamos statistikos, kad būtų galima kurti grafiką!")
+            logger.error("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
         logger.debug(f"Pusmečių/trimestrų suvestinės sugeneruotos: {len(summaries)}")
         return summaries
 

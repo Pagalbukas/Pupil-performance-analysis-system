@@ -43,7 +43,7 @@ class UserRole:
             return
         r = self._client.request("GET", self._client.BASE_URL + self.url)
         if r.status_code != 200:
-            raise RuntimeError("Keičiant paskyros tipą įvyko nenumatyta klaida")
+            raise RuntimeError("Keičiant paskyros tipą įvyko nenumatyta klaida!")
         for role in self._client._cached_roles:
             role.is_active = role.url == self.url
 
@@ -225,7 +225,7 @@ class Client:
         if class_id is not None:
             date_quick_select_elems: List[ElementBase] = form.xpath(".//a[@class='termDateSetter whiteButton']")
             if len(date_quick_select_elems) % 2 != 0:
-                raise RuntimeError("Neįmanoma automatiškai nustatyti trimestrų/pusmečių laikotarpių")
+                raise RuntimeError("Neįmanoma automatiškai nustatyti trimestrų/pusmečių laikotarpių!")
 
             half = len(date_quick_select_elems) // 2
             dates = []
