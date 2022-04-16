@@ -1,23 +1,23 @@
 from __future__ import annotations
 
 import math
-import matplotlib
+import matplotlib # type: ignore
 import os
 import logging
 
 # Tell matplotlib to use QtAgg explicitly
 matplotlib.use('QtAgg')
 
-import matplotlib.cm as mplcm # noqa: E402
-import matplotlib.colors as colors # noqa: E402
+import matplotlib.cm as mplcm # type: ignore # noqa: E402
+import matplotlib.colors as colors # type: ignore # noqa: E402
 
 # For tweaking the default UI
-from matplotlib.backend_bases import PickEvent # noqa: E402
+from matplotlib.backend_bases import PickEvent # type: ignore # noqa: E402
 # The modules exist, but for some reason, they are not picked up by Pylance
 from matplotlib.backends.qt_compat import QtWidgets, _getSaveFileName # type: ignore # noqa: E402
 from matplotlib.backends.backend_qt import NavigationToolbar2QT # type: ignore # noqa: E402
-from matplotlib.legend_handler import HandlerLine2D # noqa: E402
-from matplotlib.lines import Line2D # noqa: E402
+from matplotlib.legend_handler import HandlerLine2D # type: ignore # noqa: E402
+from matplotlib.lines import Line2D # type: ignore # noqa: E402
 from typing import TYPE_CHECKING, Union # noqa: E402
 
 if TYPE_CHECKING:
@@ -69,7 +69,7 @@ def save_figure(self, *args):
 NavigationToolbar2QT.save_figure = save_figure
 
 # Load the plot last for certain features to work
-import matplotlib.pyplot as plt # noqa: E402
+import matplotlib.pyplot as plt # type: ignore # noqa: E402
 
 from random import choice, shuffle # noqa: E402
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple # noqa: E402

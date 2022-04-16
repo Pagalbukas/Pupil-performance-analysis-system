@@ -1,7 +1,7 @@
-import openpyxl
-import xlrd
+import openpyxl # type: ignore
+import xlrd # type: ignore
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, TypeAlias, Union
 
 xlrdSheet: TypeAlias = xlrd.sheet.Sheet
 openpyxlSheet: TypeAlias = openpyxl.worksheet._read_only.ReadOnlyWorksheet
@@ -15,7 +15,7 @@ class UnifiedSheet:
     @property
     def xlrd(self) -> bool:
         """Returns true if input sheet instance was of xlrd."""
-        return isinstance(self._sheet, xlrdSheet)
+        return isinstance(self._sheet, xlrdSheet) # type: ignore
 
     def get_cell(self, column: int, row: int) -> Union[None, str, int, float]:
         """Returns cell value at specified column and row.

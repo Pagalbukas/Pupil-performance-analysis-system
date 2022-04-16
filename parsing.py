@@ -154,14 +154,14 @@ class PupilSemesterReportParser(BaseParser):
 
     def get_grade_name(self) -> str:
         """Returns the name of the grade."""
-        return self.cell(9, 1)[7:]
+        return self.cell(9, 1)[7:] # type: ignore
 
     def get_pupil_data(self, fetch_subjects: bool = True) -> List[UnifiedPupil]:
         """Returns a list of pupil objects."""
         students = []
         for row in range(14, self.last_pupil_row + 1):
             students.append(UnifiedPupil(
-                self.cell(2, row),
+                self.cell(2, row), # type: ignore
                 self.get_pupil_subjects(row) if fetch_subjects else [],
                 self.get_pupil_average(row),
                 self.get_pupil_attendance(row)
@@ -241,7 +241,7 @@ class PupilPeriodicReportParser(BaseParser):
         students = []
         for row in range(12, self.last_pupil_row + 1):
             students.append(UnifiedPupil(
-                self.cell(2, row),
+                self.cell(2, row), # type: ignore
                 self.get_pupil_subjects(row) if fetch_subjects else [],
                 self.get_pupil_average(row),
                 self.get_pupil_attendance(row)
