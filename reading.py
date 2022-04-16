@@ -3,8 +3,8 @@ import xlrd
 
 from typing import TYPE_CHECKING, Union
 
-xlrdSheet = xlrd.sheet.Sheet
-openpyxlSheet = openpyxl.worksheet._read_only.ReadOnlyWorksheet
+xlrdSheet: TypeAlias = xlrd.sheet.Sheet
+openpyxlSheet: TypeAlias = openpyxl.worksheet._read_only.ReadOnlyWorksheet
 
 class UnifiedSheet:
     """A class which implements a unified Sheet object."""

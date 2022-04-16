@@ -176,6 +176,7 @@ class PupilSemesterReportParser(BaseParser):
             name = self._subject_name_cache.get(col)
             if name is None:
                 name = self.cell(col, 4)
+                assert isinstance(name, str)
                 self._subject_name_cache[col] = name
             subjects.append(UnifiedSubject(
                 name,
@@ -255,6 +256,7 @@ class PupilPeriodicReportParser(BaseParser):
             name = self._subject_name_cache.get(col)
             if name is None:
                 name = self.cell(col, 3)
+                assert isinstance(name, str)
                 self._subject_name_cache[col] = name
             subjects.append(UnifiedSubject(
                 name,

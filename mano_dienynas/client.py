@@ -198,7 +198,7 @@ class Client:
 
         roles = []
         for elem in curr_roles + other_roles:
-            elem: ElementBase
+            assert isinstance(elem, ElementBase)
             spans: List[ElementBase] = elem.xpath(".//span")
             role_name = spans[0].text
             classes = spans[1].text
@@ -241,7 +241,7 @@ class Client:
         classes = []
         class_select_elem: ElementBase = form.find(".//select[@id='ClassNormal']")
         for opt in class_select_elem.getchildren():
-            opt: ElementBase
+            assert isinstance(opt, ElementBase)
             value = opt.attrib["value"]
             if value == "0":
                 continue
@@ -285,8 +285,7 @@ class Client:
             split = file.split("_")
             f_class_id, period_start, period_end, time_generated = split
             if f_class_id == class_id and period_start == date_from and period_end == date_to:
-                time_generated = int(time_generated.split(".")[0])
-                if timestamp - 60 * 60 < time_generated:
+                if timestamp - 60 * 60 < int(time_generated.split(".")[0]):
                     return file_path
                 os.remove(file_path)
 

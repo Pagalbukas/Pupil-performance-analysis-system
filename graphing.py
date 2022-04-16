@@ -215,6 +215,7 @@ class BaseGraph:
         if self.title:
             fig.suptitle(self.title, fontsize=16)
 
+        assert self.title is not None
         plt.gcf().canvas.set_window_title(self.title.replace("\n", " "))
         plt.show()
 
