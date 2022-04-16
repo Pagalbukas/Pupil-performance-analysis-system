@@ -96,7 +96,7 @@ class BaseGraph:
         ax.set_ylabel('Vidurkis')
         ax.set_xlabel('Laikotarpis')
 
-    def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
+    def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
         raise NotImplementedError
 
     def display(
@@ -239,7 +239,7 @@ class G(BaseGraph):
         """Returns a list of GraphValues for graphing as Y value."""
         raise NotImplementedError
 
-    def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
+    def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
         """Returns X and Y values for graphing."""
         return (self.period_names, self.get_graph_values())
 
@@ -287,7 +287,7 @@ class UnifiedClassGraph(G):
     def get_graph_values(self) -> List[GraphValue]:
         return [GraphValue(n, self.pupils[n]) for n in self.pupils.keys()]
 
-    def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
+    def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
         # Anonymize names when displaying for unauthorized people, in order to prevent disclosing of any additional data
         if self.app.settings.hide_names:
             self._anonymize_pupil_names()
@@ -386,7 +386,7 @@ class AbstractPupilAveragesGraph(G):
     def get_graph_values(self) -> List[GraphValue]:
         raise NotImplementedError
 
-    def acquire_axes(self) -> Tuple[str, List[GraphValue]]:
+    def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
         return (self.period_names, self.get_graph_values())
 
 class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):

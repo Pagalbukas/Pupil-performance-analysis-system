@@ -24,9 +24,9 @@ class InconclusiveResourceError(ParsingError):
 class BaseParser:
 
     if TYPE_CHECKING:
-        _average_col: int
-        _last_pupil_row: int
-        _attendance_col: int
+        _average_col: Optional[int]
+        _last_pupil_row: Optional[int]
+        _attendance_col: Optional[int]
 
     def __init__(self, file_path: str) -> None:
         self._reader = SpreadsheetReader(file_path)
@@ -75,7 +75,7 @@ class BaseParser:
     def get_pupil_attendance(self, pupil_row: int) -> AttendanceDict:
         """Returns a dict containing pupil's attendance."""
 
-        def convert_value(raw: Optional[Union[float, int]]) -> int:
+        def convert_value(raw: Optional[Union[str, float, int]]) -> int:
             """Helper function to convert cell values to integers."""
             if raw is None:
                 return 0

@@ -96,7 +96,7 @@ class UnifiedAveragesReportGenerator:
                 break
             yield self._client.generate_class_averages_report(self.class_id, date[0], date[1])
 
-    def generate_monthly_reports(self) -> List[str]:
+    def generate_monthly_reports(self):
         """Returns a list of file paths to generated periodic reports."""
 
         def get_first_date(date: datetime.datetime):
@@ -125,7 +125,7 @@ class Client:
         self.BASE_URL = base_url
         self.cookies = {}
 
-        self._session_expires = None
+        self._session_expires: Optional[datetime.datetime] = None
         self._cached_roles: List[UserRole] = []
 
     @property
