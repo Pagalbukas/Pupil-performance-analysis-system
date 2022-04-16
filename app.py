@@ -765,7 +765,7 @@ class App(QWidget):
         self.view_aggregated = False
         self.view_attendance = False
 
-        self.setWindowTitle('Mokinių pasiekimų analizatorius')
+        self.setWindowTitle('Mokinių pasiekimų ir lankomumo analizatorius')
         self.setWindowIcon(QIcon('icon.png'))
 
         self.left = 10
