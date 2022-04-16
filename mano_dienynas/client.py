@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import datetime
 import os
-import requests
+import requests # type: ignore
 
-from lxml import etree
-from lxml.etree import _ElementTree, ElementBase
+from lxml import etree # type: ignore
+from lxml.etree import _ElementTree, ElementBase # type: ignore
 from io import StringIO
-from requests.models import Response
-from typing import List, Optional, Tuple, Union
+from requests.models import Response # type: ignore
+from typing import Dict, List, Optional, Tuple, Union
 
 from files import get_temp_dir
 
@@ -123,7 +123,7 @@ class Client:
 
     def __init__(self, base_url: str = "https://www.manodienynas.lt") -> None:
         self.BASE_URL = base_url
-        self.cookies = {}
+        self.cookies: Dict[str, str] = {}
 
         self._session_expires: Optional[datetime.datetime] = None
         self._cached_roles: List[UserRole] = []

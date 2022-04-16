@@ -18,11 +18,11 @@ from matplotlib.backends.qt_compat import QtWidgets, _getSaveFileName # type: ig
 from matplotlib.backends.backend_qt import NavigationToolbar2QT # type: ignore # noqa: E402
 from matplotlib.legend_handler import HandlerLine2D # type: ignore # noqa: E402
 from matplotlib.lines import Line2D # type: ignore # noqa: E402
-from typing import TYPE_CHECKING, Union # noqa: E402
+from typing import TYPE_CHECKING, Dict, Union # noqa: E402
 
 if TYPE_CHECKING:
     from app import App
-    from summaries import BaseClassReportSummary, ClassPeriodReportSummary
+    from summaries import ClassPeriodReportSummary, ClassSemesterReportSummary
 
 logger = logging.getLogger("analizatorius")
 
@@ -198,7 +198,7 @@ class BaseGraph:
 
             # Remove annotations if appropriate
             annotations = line_bound_annotations[origline]
-            [a.set(visible=visible) for a in annotations if a is not None]
+            [a.set(visible=visible) for a in annotations if a is not None] # type: ignore
 
             # Change the alpha on the line in the legend so we can see what lines
             # have been toggled.
@@ -222,7 +222,7 @@ class BaseGraph:
 
 class G(BaseGraph):
 
-    def __init__(self, app: App, summaries: List[BaseClassReportSummary]) -> None:
+    def __init__(self, app: App, summaries: Union[List[ClassSemesterReportSummary], List[ClassPeriodReportSummary]]) -> None:
         super().__init__(app)
         self.summaries = summaries
         self._load()
@@ -248,8 +248,12 @@ class G(BaseGraph):
 class UnifiedClassGraph(G):
     """A unified aggregated class graph."""
 
-    def __init__(self, app: App, summaries: List[BaseClassReportSummary]) -> None:
-        self.pupils = {}
+    def __init__(
+        self,
+        app: App,
+        summaries: Union[List[ClassSemesterReportSummary], List[ClassPeriodReportSummary]]
+    ) -> None:
+        self.pupils: Dict[str, list] = {}
         super().__init__(app, summaries)
 
     def _load(self) -> None:
@@ -298,7 +302,11 @@ class UnifiedClassGraph(G):
 class UnifiedClassAveragesGraph(UnifiedClassGraph):
     """A unified aggregated class averages graph."""
 
-    def __init__(self, app: App, summaries: List[BaseClassReportSummary]) -> None:
+    def __init__(
+        self,
+        app: App,
+        summaries: Union[List[ClassSemesterReportSummary], List[ClassPeriodReportSummary]]
+    ) -> None:
         self.pupils = {}
         super().__init__(app, summaries)
 
@@ -331,7 +339,11 @@ class UnifiedClassAveragesGraph(UnifiedClassGraph):
 class UnifiedClassAttendanceGraph(UnifiedClassGraph):
     """A unified aggregated class attendance graph."""
 
-    def __init__(self, app: App, summaries: List[BaseClassReportSummary]) -> None:
+    def __init__(
+        self,
+        app: App,
+        summaries: Union[List[ClassSemesterReportSummary], List[ClassPeriodReportSummary]]
+    ) -> None:
         self.pupils = {}
         super().__init__(app, summaries)
 
@@ -504,7 +516,7 @@ class PupilSubjectPeriodicAveragesGraph(AbstractPupilAveragesGraph):
     def __init__(self, app: App, summaries: List[ClassPeriodReportSummary], pupil_idx: int) -> None:
         self.pupil_idx = pupil_idx
         self.pupils = summaries[-1].pupils
-        self.subjects = {}
+        self.subjects: Dict[str, list]  = {}
         super().__init__(app, summaries)
 
     def _get_subject_object(self, name: str) -> list:

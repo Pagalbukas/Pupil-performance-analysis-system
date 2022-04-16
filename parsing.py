@@ -1,6 +1,6 @@
 import datetime
 
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 from reading import SpreadsheetReader
 from models import AttendanceDict, Mark, UnifiedPupil, UnifiedSubject
@@ -103,7 +103,7 @@ class BaseParser:
         """Boilerplate function for returning value at the specified column and row of the cell."""
         return self._sheet.get_cell(col, row)
 
-    def create_summary(self) -> None:
+    def create_summary(self) -> Union[ClassSemesterReportSummary, ClassPeriodReportSummary]:
         """Attempts to create a Summary object.
 
         May raise an exception."""
@@ -117,14 +117,14 @@ class PupilSemesterReportParser(BaseParser):
         # Obtain term start, end and type
         raw_term_value = self.cell(9, 2)
         # Laikotarpis: 2020-2021m.m.II pusmetis -> 2020-2021m.m.II pusmetis
-        raw_term_value = raw_term_value.split(": ")[1].strip() # Split here because the word 'Periodas' could also be used
+        raw_term_value = raw_term_value.split(": ")[1].strip() # type: ignore # Split here because the word 'Periodas' could also be used
         term_value = raw_term_value.split("-")
 
         self.term_start = datetime.datetime(int(term_value[0]), 1, 1, tzinfo=datetime.timezone.utc)
         self.term_end = datetime.datetime(int(term_value[1][:4]), 1, 1, tzinfo=datetime.timezone.utc)
         self.type = term_value[1][8:]
 
-        self._subject_name_cache = {}
+        self._subject_name_cache: Dict[int, str] = {}
 
     def _find_average_column(self) -> int:
         if self._average_col is None:
@@ -175,7 +175,7 @@ class PupilSemesterReportParser(BaseParser):
             # Cache subject names as reading a cell with openpyxl is expensive op
             name = self._subject_name_cache.get(col)
             if name is None:
-                name = self.cell(col, 4)
+                name = self.cell(col, 4) # type: ignore
                 assert isinstance(name, str)
                 self._subject_name_cache[col] = name
             subjects.append(UnifiedSubject(
@@ -209,13 +209,13 @@ class PupilPeriodicReportParser(BaseParser):
 
     def __init__(self, file_path: str) -> None:
         super().__init__(file_path)
-        term_value = self.cell(7, 1).split(" - ")
+        term_value = self.cell(7, 1).split(" - ") # type: ignore
         self.term_start = datetime.datetime.strptime(term_value[0], "%Y-%m-%d")
         self.term_start = self.term_start.replace(tzinfo=datetime.timezone.utc)
         self.term_end = datetime.datetime.strptime(term_value[1], "%Y-%m-%d")
         self.term_end = self.term_end.replace(tzinfo=datetime.timezone.utc)
 
-        self._subject_name_cache = {}
+        self._subject_name_cache: Dict[int, str] = {}
 
     def _find_average_column(self) -> int:
         if self._average_col is None:
@@ -234,7 +234,7 @@ class PupilPeriodicReportParser(BaseParser):
 
     def get_grade_name(self) -> str:
         """Returns the name of the grade."""
-        return self.cell(5, 1)[7:-2] # Remove comma
+        return self.cell(5, 1)[7:-2] # type: ignore # Remove comma
 
     def get_pupil_data(self, fetch_subjects: bool = True) -> List[UnifiedPupil]:
         """Returns a list of pupil objects."""
@@ -255,7 +255,7 @@ class PupilPeriodicReportParser(BaseParser):
             # Cache subject names as reading a cell with openpyxl is expensive op
             name = self._subject_name_cache.get(col)
             if name is None:
-                name = self.cell(col, 3)
+                name = self.cell(col, 3) # type: ignore
                 assert isinstance(name, str)
                 self._subject_name_cache[col] = name
             subjects.append(UnifiedSubject(
@@ -271,7 +271,7 @@ class PupilPeriodicReportParser(BaseParser):
 
         # Check whether Excel file is of correct type
         # TODO: investigate future proofing
-        if self.cell(1, 1)[:-1] != "Ataskaita: Mokinių vidurkių suvestinė":
+        if self.cell(1, 1)[:-1] != "Ataskaita: Mokinių vidurkių suvestinė": # type: ignore
             raise InvalidResourceTypeError
 
         # Check whether group average is a zero, if it is, throw parsing error due to incomplete file

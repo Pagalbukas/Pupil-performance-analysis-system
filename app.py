@@ -16,15 +16,15 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QScreen, QIcon, QKeyEvent
 from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
-from requests.exceptions import RequestException
-from typing import List, Tuple
+from requests.exceptions import RequestException # type: ignore
+from typing import List, Optional, Tuple
 
 from files import get_data_dir, get_log_file
 from graphing import (
     PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
     UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph
 )
-from mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class
+from mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class # type: ignore
 from parsing import PupilSemesterReportParser, PupilPeriodicReportParser, ParsingError
 from settings import Settings
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
@@ -254,16 +254,13 @@ class SelectGraphWidget(QWidget):
         layout.addWidget(back_button)
         self.setLayout(layout)
 
-    def set_text(self, text: str) -> str:
-        self.label.setText(text)
-
 class PupilSelectionWidget(QWidget):
 
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
-        self.summaries = []
-        self.selected_index: int = None
+        self.summaries: List[ClassPeriodReportSummary] = []
+        self.selected_index: Optional[int] = None
 
         layout = QVBoxLayout()
         label = QLabel("Pasirinkite, kurį mokinį iš sąrašo norite nagrinėti.")
@@ -278,7 +275,7 @@ class PupilSelectionWidget(QWidget):
             indexes = self.name_list.selectedIndexes()
             if len(indexes) == 0:
                 return
-            index = indexes[0].row()
+            index = indexes[0].row() # type: ignore
             self.subject_button.setEnabled(True)
             self.attendance_button.setEnabled(True)
             self.aggregated_button.setEnabled(True)
@@ -383,7 +380,7 @@ class LoginWidget(QWidget):
 
     def fill_fields(self) -> None:
         """Fills the input fields with default and saved values."""
-        self.username_field.setText(self.app.settings.username)
+        self.username_field.setText(self.app.settings.username or "")
 
     def clear_fields(self) -> None:
         """Clears password and username fields."""
@@ -452,7 +449,7 @@ class SelectUserRoleWidget(QWidget):
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
-        self.selected_index: int = None
+        self.selected_index: Optional[int] = None
 
         layout = QVBoxLayout()
         label = QLabel("Pasirinkite vartotojo tipą. Jis bus naudojamas nagrinėjamai klasei pasirinkti.")
@@ -507,7 +504,7 @@ class SelectUserRoleWidget(QWidget):
         indexes = self.role_list.selectedIndexes()
         if len(indexes) == 0:
             return
-        index = indexes[0].row()
+        index = indexes[0].row() # type: ignore
         self.select_button.setEnabled(True)
         self.selected_index = index
 
@@ -521,6 +518,7 @@ class SelectUserRoleWidget(QWidget):
     def change_role(self) -> None:
         """Creates a change role worker."""
         self.disable_gui()
+        assert self.selected_index is not None
         self.worker = ChangeRoleWorker(self.app, self.selected_index)
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
@@ -538,12 +536,12 @@ class SelectClassWidget(QWidget):
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
-        self.selected_index: int = None
+        self.selected_index: Optional[int] = None
 
         layout = QVBoxLayout()
         label = QLabel("Pasirinkite nagrinėjamą klasę.")
         self.class_list = QListWidget()
-        self.classes = []
+        self.classes: List[Class] = []
         self.semester_button = QPushButton('Generuoti trimestrų/pusmečių ataskaitas')
         self.monthly_button = QPushButton('Generuoti mėnesines ataskaitas')
         self.back_button = QPushButton('Grįžti į pradžią')
@@ -570,7 +568,7 @@ class SelectClassWidget(QWidget):
         indexes = self.class_list.selectedIndexes()
         if len(indexes) == 0:
             return
-        index = indexes[0].row()
+        index = indexes[0].row() # type: ignore
         self.semester_button.setEnabled(True)
         self.monthly_button.setEnabled(True)
         self.selected_index = index
@@ -599,7 +597,8 @@ class SelectClassWidget(QWidget):
     def on_error_signal(self, error: str) -> None:
         """Callback of GenerateReportWorker thread on error."""
         self.propagate_error(error)
-        self.progress_dialog.hide()
+        if self.progress_dialog:
+            self.progress_dialog.hide()
         self.worker_thread.quit()
 
     def on_progress_signal(self, data: Tuple[int, int]) -> None:
@@ -609,6 +608,8 @@ class SelectClassWidget(QWidget):
         if self.progress_dialog is None:
             self._create_progress_dialog()
 
+        assert self.progress_dialog is not None
+
         if not self.progress_dialog.isVisible():
             self.progress_dialog.show()
         self.progress_dialog.setRange(0, total)
@@ -616,7 +617,8 @@ class SelectClassWidget(QWidget):
 
     def on_success_signal(self, file_paths: List[str]) -> None:
         """Callback of GenerateReportWorker thread on success."""
-        self.progress_dialog.hide()
+        if self.progress_dialog:
+            self.progress_dialog.hide()
         self.worker_thread.quit()
         sums = self.app.generate_periodic_summaries(file_paths)
         sums.sort(key=lambda s: (s.term_start))
@@ -644,6 +646,7 @@ class SelectClassWidget(QWidget):
     def generate_periodic_reports(self) -> None:
         """Starts GenerateReportWorker thread for periodic reports."""
         self.disable_gui()
+        assert self.selected_index is not None
         self.worker = GenerateReportWorker(self.app, self.classes[self.selected_index])
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
@@ -656,6 +659,7 @@ class SelectClassWidget(QWidget):
     def generate_monthly_reports(self) -> None:
         """Starts GenerateReportWorker thread for monthly reports."""
         self.disable_gui()
+        assert self.selected_index is not None
         self.worker = GenerateReportWorker(self.app, self.classes[self.selected_index])
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
