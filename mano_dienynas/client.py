@@ -198,7 +198,7 @@ class Client:
 
         roles = []
         for elem in curr_roles + other_roles:
-            assert isinstance(elem, ElementBase)
+            assert isinstance(elem, etree._Element)
             spans: List[ElementBase] = elem.xpath(".//span")
             role_name = spans[0].text
             classes = spans[1].text
@@ -241,7 +241,7 @@ class Client:
         classes = []
         class_select_elem: ElementBase = form.find(".//select[@id='ClassNormal']")
         for opt in class_select_elem.getchildren():
-            assert isinstance(opt, ElementBase)
+            assert isinstance(opt, etree._Element)
             value = opt.attrib["value"]
             if value == "0":
                 continue
