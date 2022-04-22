@@ -8,7 +8,11 @@ from typing import List, Tuple
 if sys.platform == "win32":
     DATA_PATH = os.path.join(os.environ["APPDATA"], "Pagalbukas-Analizatorius")
 else:
-    DATA_PATH = os.path.join("/etc", "pagalbukas-analizatorius")
+    config_dir = os.path.join(os.environ["HOME"], ".config")
+    if not os.path.exists(config_dir):
+        os.mkdir(config_dir)
+    DATA_PATH = os.path.join(config_dir, "pagalbukas-analizatorius")
+    del config_dir
 
 TEMP_PATH = os.path.join(DATA_PATH, "temp")
 
