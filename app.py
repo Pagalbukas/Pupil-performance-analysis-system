@@ -19,7 +19,7 @@ from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
 from requests.exceptions import RequestException # type: ignore
 from typing import List, Optional, Tuple
 
-from files import get_data_dir, get_log_file
+from files import get_data_dir, get_home_dir, get_log_file, open_path
 from graphing import (
     PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
     UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph
@@ -728,7 +728,7 @@ class SettingsWidget(QWidget):
         self.app.settings.flip_names = self.flip_names_checkbox.isChecked()
 
     def on_save_path_button_click(self) -> None:
-        os.startfile(get_data_dir())
+        open_path(get_data_dir())
 
     def load_state(self) -> None:
         self.last_dir_label.setText(self.app.settings.last_dir or "nėra")
@@ -981,7 +981,7 @@ class App(QWidget):
         """Displays a file selection dialog for picking Excel files."""
         directory = self.settings.last_dir
         if directory is None or not os.path.exists(directory):
-            directory = os.path.join(os.environ["userprofile"], "Downloads")
+            directory = os.path.join(get_home_dir(), "Downloads")
 
         files, _ = QFileDialog.getOpenFileNames(
             self,

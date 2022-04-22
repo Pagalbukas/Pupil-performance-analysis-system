@@ -1,9 +1,15 @@
 import os
 import shutil
+import subprocess
+import sys
 
 from typing import List, Tuple
 
-DATA_PATH = os.path.join(os.environ["APPDATA"], "Pagalbukas-Analizatorius")
+if sys.platform == "win32":
+    DATA_PATH = os.path.join(os.environ["APPDATA"], "Pagalbukas-Analizatorius")
+else:
+    DATA_PATH = os.path.join("/etc", "pagalbukas-analizatorius")
+
 TEMP_PATH = os.path.join(DATA_PATH, "temp")
 
 IGNORED_ITEMS_SOURCE_PATH = os.path.join(os.curdir, "data", "ignoruoti_dalykai.txt")
@@ -13,6 +19,12 @@ def get_data_dir() -> str:
     if not os.path.exists(DATA_PATH):
         os.mkdir(DATA_PATH)
     return DATA_PATH
+
+def get_home_dir() -> str:
+    """Returns home directory for the current platform."""
+    if sys.platform == "win32":
+        return os.environ["USERPROFILE"]
+    return os.environ["HOME"]
 
 def get_temp_dir() -> str:
     if not os.path.exists(TEMP_PATH):
@@ -56,3 +68,12 @@ def get_ignored_item_filters() -> List[Tuple[int, str]]:
 
             filters.append((val, string))
     return filters
+
+def open_path(path: str) -> None:
+    """Opens the path in a file browser."""
+    if sys.platform == "win32":
+        return os.startfile(path)
+    subprocess.check_call(
+        ['xdg-open', path],
+        stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT
+    )
