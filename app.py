@@ -40,11 +40,15 @@ formatter = logging.Formatter('[%(asctime)s %(name)s:%(levelname)s]: %(message)s
 fh = RotatingFileHandler(get_log_file(), encoding="utf-8", maxBytes=1024 * 512, backupCount=10)
 fh.setFormatter(formatter)
 fh.setLevel(logging.INFO)
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-ch.setFormatter(formatter)
-logger.addHandler(ch)
 logger.addHandler(fh)
+
+# Detect Nuitka compiled code and do not create a StreamHandler
+ch = None
+if "__compiled__" not in dir():
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
 class GenerateReportWorker(QObject):
     success = Signal(list)
@@ -763,7 +767,8 @@ class App(QWidget):
         if self.debug:
             logger.setLevel(logging.DEBUG)
             fh.setLevel(logging.DEBUG)
-            ch.setLevel(logging.DEBUG)
+            if ch:
+                ch.setLevel(logging.DEBUG)
             logger.debug(f"Loaded modules: {list(sys.modules.keys())}")
 
         self.view_aggregated = False

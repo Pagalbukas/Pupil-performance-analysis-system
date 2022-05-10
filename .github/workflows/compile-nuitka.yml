@@ -27,8 +27,6 @@ jobs:
           --include-module=matplotlib.backends.backend_pdf
           --include-module=matplotlib.backends.backend_qtagg
           --windows-icon-from-ico=icon.ico
-          --windows-force-stdout-spec=C:\pagalbukas-stdout.log
-          --windows-force-stderr-spec=C:\pagalbukas-stderr.log
           --windows-disable-console
           --standalone
           main.py
