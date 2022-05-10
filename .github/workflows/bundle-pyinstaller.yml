@@ -9,7 +9,7 @@ jobs:
       - name: Set up Python 3.8
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Install dependencies
         run: |
           python -m pip install -r requirements.txt
@@ -17,13 +17,16 @@ jobs:
       - name: Bundle the program
         run: |
           pyinstaller main.spec
+      - name: Create a NSI script
+        run: |
+          python generate-nsi.py dist\main
       - name: Create installer
         uses: joncloud/makensis-action@v3.6
         with:
-          script-file: "Analizatorius.nsi"
+          script-file: "install-script.nsi"
           arguments: "/V3"
       - name: Upload installer
         uses: actions/upload-artifact@v3
         with:
-            name: Analizatorius
+            name: Analizatorius-PyInstaller
             path: Analizatorius.exe

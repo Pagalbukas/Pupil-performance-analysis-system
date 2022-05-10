@@ -1,7 +1,12 @@
 __pycache__
+.temp
+# Nuitka compilation files
 main.dist
 main.build
-.temp
+# Pyinstaller build files
 dist
 build
+# The executable installer
 *.exe
+# NSIS installer script
+install-script.nsi
