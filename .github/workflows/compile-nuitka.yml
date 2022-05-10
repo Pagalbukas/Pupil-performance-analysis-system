@@ -31,7 +31,7 @@ jobs:
           --standalone
           main.py
       - name: Copy data files
-      - run: |
+        run: |
           xcopy data main.dist\data /E /H /I
       - name: Create a NSI script
         run: |
