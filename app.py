@@ -200,17 +200,17 @@ class MainWidget(QWidget):
 
         notice_label.setText(f"<a href=\"{REPO_URL}\">v{major}.{minor}.{patch} Dominykas Svetikas © 2022</a>")
         notice_label.setTextFormat(Qt.RichText)
-        notice_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        notice_label.setTextInteractionFlags(Qt.TextBrowserInteraction) # type: ignore
         notice_label.setOpenExternalLinks(True)
 
         # God forbid I have to mess with this sh*t again
         # Took longer than aligning a div in CSS
-        layout.addWidget(agg_sem_button, alignment=Qt.AlignVCenter)
-        layout.addWidget(agg_mon_button, alignment=Qt.AlignVCenter)
-        layout.addWidget(att_mon_button, alignment=Qt.AlignVCenter)
-        layout.addWidget(pup_mon_button, alignment=Qt.AlignVCenter)
-        layout.addWidget(settings_button, alignment=Qt.AlignVCenter)
-        layout.addWidget(notice_label, alignment=Qt.AlignRight | Qt.AlignBottom | Qt.AlignJustify)
+        layout.addWidget(agg_sem_button, alignment=Qt.AlignVCenter) # type: ignore
+        layout.addWidget(agg_mon_button, alignment=Qt.AlignVCenter) # type: ignore
+        layout.addWidget(att_mon_button, alignment=Qt.AlignVCenter) # type: ignore
+        layout.addWidget(pup_mon_button, alignment=Qt.AlignVCenter) # type: ignore
+        layout.addWidget(settings_button, alignment=Qt.AlignVCenter) # type: ignore
+        layout.addWidget(notice_label, alignment=Qt.AlignRight | Qt.AlignBottom | Qt.AlignJustify) # type: ignore
         self.setLayout(layout)
 
     def on_settings_button_click(self) -> None:
@@ -703,7 +703,7 @@ class SettingsWidget(QWidget):
         settings_layout.addRow(QLabel("Apversti vardus (grafikuose):"), self.flip_names_checkbox)
         settings_layout.addRow(QLabel("Programos duomenys:"), self.save_path_button)
 
-        layout.addWidget(label, alignment=Qt.AlignTop)
+        layout.addWidget(label, alignment=Qt.AlignTop) # type: ignore
         layout.addLayout(settings_layout)
         layout.addWidget(self.save_button)
         layout.addWidget(self.back_button)
@@ -774,8 +774,8 @@ class App(QWidget):
 
         self.left = 10
         self.top = 10
-        self.width = 640
-        self.height = 480
+        self.w = 640
+        self.h = 480
 
         self.stack = QStackedWidget()
 
@@ -848,7 +848,7 @@ class App(QWidget):
         self.display_pupil_monthly_graph_selector(summaries)
 
     def initUI(self):
-        self.setGeometry(self.left, self.top, self.width, self.height)
+        self.setGeometry(self.left, self.top, self.w, self.h)
         center = QScreen.availableGeometry(QApplication.primaryScreen()).center()
         geo = self.frameGeometry()
         geo.moveCenter(center)
