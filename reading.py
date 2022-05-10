@@ -1,7 +1,8 @@
 import openpyxl # type: ignore
 import xlrd # type: ignore
 
-from typing import TYPE_CHECKING, TypeAlias, Union
+from typing import TYPE_CHECKING, Union
+from typing_extensions import TypeAlias
 
 xlrdSheet: TypeAlias = xlrd.sheet.Sheet
 openpyxlSheet: TypeAlias = openpyxl.worksheet._read_only.ReadOnlyWorksheet
