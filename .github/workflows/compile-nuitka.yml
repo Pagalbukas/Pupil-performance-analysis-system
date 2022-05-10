@@ -6,10 +6,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v2
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v3
         with:
           python-version: 3.9
+          architecture: x86
       - name: Install dependencies
         run: |
           python -m pip install -r requirements.txt
@@ -27,6 +28,8 @@ jobs:
           --include-module=matplotlib.backends.backend_pdf
           --include-module=matplotlib.backends.backend_qtagg
           --windows-icon-from-ico=icon.ico
+          --windows-force-stdout-spec=C:\pagalbukas-stdout.log
+          --windows-force-stderr-spec=C:\pagalbukas-stderr.log
           --windows-disable-console
           --standalone
           main.py
