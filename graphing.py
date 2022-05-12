@@ -89,9 +89,17 @@ class BaseGraph:
     LINE_STYLES = ['-', '--', '-.', ':']
     STYLE_COUNT = len(LINE_STYLES)
 
-    def __init__(self, app: App, title: str = None) -> None:
+    def __init__(self, app: App) -> None:
         self.app = app
-        self.title = title
+        self._title: Optional[str] = None
+
+    @property
+    def title(self) -> str:
+        return self._title or "Grafikas"
+
+    @property
+    def window_title(self) -> str:
+        return self.title.replace("\n", " ")
 
     def set_labels(self, ax) -> None:
         ax.set_ylabel('Vidurkis')
@@ -219,12 +227,8 @@ class BaseGraph:
         # Create a grid of values
         ax.grid(True)
 
-        # If title is provided, set the title of the graph
-        if self.title:
-            fig.suptitle(self.title, fontsize=16)
-
-        assert self.title is not None
-        plt.gcf().canvas.set_window_title(self.title.replace("\n", " "))
+        fig.suptitle(self.title, fontsize=16)
+        plt.gcf().canvas.set_window_title(self.window_title)
         plt.show()
 
 
@@ -318,6 +322,10 @@ class UnifiedClassAveragesGraph(UnifiedClassGraph):
         self.pupils = {}
         super().__init__(app, summaries)
 
+    @property
+    def window_title(self) -> str:
+        return "Bendri klasės mokinių vidurkiai"
+
     def _load(self) -> None:
         pupil_names = [s.name for s in self.summaries[-1].pupils]
 
@@ -325,11 +333,11 @@ class UnifiedClassAveragesGraph(UnifiedClassGraph):
         first_summary_year = self.summaries[0].term_start.year
         last_summary_year = self.summaries[-1].term_end.year
 
-        self.title = self.summaries[-1].grade_name + " bendri mokinių vidurkiai\n"
+        self._title = f'Klasė: {self.summaries[-1].grade_name}\nBendri mokinių vidurkiai\n'
         if first_summary_year == last_summary_year:
-            self.title += str(first_summary_year)
+            self._title += str(first_summary_year)
         else:
-            self.title += f'{first_summary_year} - {last_summary_year}'
+            self._title += f'{first_summary_year} m. - {last_summary_year} m.'
 
         for i, summary in enumerate(self.summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
@@ -355,6 +363,10 @@ class UnifiedClassAttendanceGraph(UnifiedClassGraph):
         self.pupils = {}
         super().__init__(app, summaries)
 
+    @property
+    def window_title(self) -> str:
+        return "Bendras klasės lankomumas"
+
     def _load(self) -> None:
         pupil_names = [s.name for s in self.summaries[-1].pupils]
 
@@ -362,11 +374,11 @@ class UnifiedClassAttendanceGraph(UnifiedClassGraph):
         first_summary_year = self.summaries[0].term_start.year
         last_summary_year = self.summaries[-1].term_end.year
 
-        self.title = self.summaries[-1].grade_name + " praleistų pamokų kiekis\n"
+        self._title = f'Klasė: {self.summaries[-1].grade_name}\nPraleistų pamokų kiekis\n'
         if first_summary_year == last_summary_year:
-            self.title += str(first_summary_year)
+            self._title += str(first_summary_year)
         else:
-            self.title += f'{first_summary_year} - {last_summary_year}'
+            self._title += f'{first_summary_year} m. - {last_summary_year} m.'
 
         for i, summary in enumerate(self.summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
@@ -402,7 +414,7 @@ class AbstractPupilAveragesGraph(G):
 
         if first_summary_year == last_summary_year:
             return str(first_summary_year)
-        return f'{first_summary_year} - {last_summary_year}'
+        return f'{first_summary_year} m. - {last_summary_year} m.'
 
     def get_graph_values(self) -> List[GraphValue]:
         raise NotImplementedError
@@ -421,12 +433,16 @@ class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):
         ]
         super().__init__(app, summaries)
 
+    @property
+    def window_title(self) -> str:
+        return "Mokinio bendras vidurkis"
+
     def _load(self) -> None:
         name = self.pupils[self.pupil_idx].name
         if self.app.settings.flip_names:
             name = self.pupils[self.pupil_idx].sane_name
 
-        self.title = f"{name} bendras vidurkis\n{self.period}"
+        self._title = f'Mokinys: {name}\nBendras vidurkis\n{self.period}'
         for i, summary in enumerate(self.summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
             for j, pupil in enumerate(summary.pupils):
@@ -471,12 +487,16 @@ class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
         ]
         super().__init__(app, summaries)
 
+    @property
+    def window_title(self) -> str:
+        return "Mokinio lankomumas"
+
     def _load(self) -> None:
         name = self.pupils[self.pupil_idx].name
         if self.app.settings.flip_names:
             name = self.pupils[self.pupil_idx].sane_name
 
-        self.title = f"{name} praleistų pamokų kiekis\n{self.period}"
+        self._title = f'Mokinys: {name}\nPraleistų pamokų kiekis\n{self.period}'
         for i, summary in enumerate(self.summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
             for j, pupil in enumerate(summary.pupils):
@@ -534,12 +554,16 @@ class PupilSubjectPeriodicAveragesGraph(AbstractPupilAveragesGraph):
             subject = self.subjects[name]
         return subject
 
+    @property
+    def window_title(self) -> str:
+        return "Mokinio dalykų vidurkis"
+
     def _load(self) -> None:
         name = self.pupils[self.pupil_idx].name
         if self.app.settings.flip_names:
             name = self.pupils[self.pupil_idx].sane_name
 
-        self.title = f"{name} dalykų vidurkiai\n{self.period}"
+        self._title = f'Mokinys: {name}\nDalykų vidurkiai\n{self.period}'
         for i, summary in enumerate(self.summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
 
