@@ -3,7 +3,7 @@ import datetime
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 from reading import SpreadsheetReader
-from models import AttendanceDict, Mark, UnifiedPupil, UnifiedSubject
+from models import Attendance, Mark, UnifiedPupil, UnifiedSubject
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
 class ParsingError(Exception):
@@ -72,7 +72,7 @@ class BaseParser:
         """Returns the column for the attendance column in the spreadsheet."""
         raise NotImplementedError
 
-    def get_pupil_attendance(self, pupil_row: int) -> AttendanceDict:
+    def get_pupil_attendance(self, pupil_row: int) -> Attendance:
         """Returns a dict containing pupil's attendance."""
 
         def convert_value(raw: Optional[Union[str, float, int]]) -> int:
@@ -81,12 +81,12 @@ class BaseParser:
                 return 0
             return int(raw)
 
-        return {
-            "total_missed": convert_value(self.cell(self.attendance_column, pupil_row)),
-            "justified_due_illness": convert_value(self.cell(self.attendance_column + 1, pupil_row)),
-            "justified_due_other": convert_value(self.cell(self.attendance_column + 2, pupil_row)),
-            "not_justified": convert_value(self.cell(self.attendance_column + 3, pupil_row))
-        }
+        return Attendance(
+            convert_value(self.cell(self.attendance_column, pupil_row)),
+            convert_value(self.cell(self.attendance_column + 1, pupil_row)),
+            convert_value(self.cell(self.attendance_column + 2, pupil_row)),
+            convert_value(self.cell(self.attendance_column + 3, pupil_row))
+        )
 
     def get_pupil_average(self, pupil_row: int) -> Mark:
         """Returns pupil's average mark."""

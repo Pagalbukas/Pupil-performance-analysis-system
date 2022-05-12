@@ -12,6 +12,20 @@ class AttendanceDict(TypedDict):
     justified_due_other: int
     not_justified: int
 
+class Attendance:
+
+    def __init__(
+        self,
+        total_missed: int,
+        justified_by_illness: int,
+        justified_by_other: int,
+        not_justified: int
+    ) -> None:
+        self.total_missed = total_missed
+        self.justified_by_illness = justified_by_illness
+        self.justified_by_other = justified_by_other
+        self.not_justified = not_justified
+
 class SubjectNames:
     """This class contains constants for subject names."""
 
@@ -178,7 +192,7 @@ class UnifiedSubject:
 
 class UnifiedPupil:
 
-    def __init__(self, name: str, subjects: List[UnifiedSubject], average: Mark, attendance: AttendanceDict) -> None:
+    def __init__(self, name: str, subjects: List[UnifiedSubject], average: Mark, attendance: Attendance) -> None:
         self.name = name
         self.subjects = subjects
         self.average = average

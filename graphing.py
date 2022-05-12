@@ -369,9 +369,9 @@ class UnifiedClassAttendanceGraph(UnifiedClassGraph):
                     continue
 
                 if self.app.settings.flip_names:
-                    self._get_pupil_object(pupil.sane_name)[i] = pupil.attendance["total_missed"]
+                    self._get_pupil_object(pupil.sane_name)[i] = pupil.attendance.total_missed
                 else:
-                    self._get_pupil_object(pupil.name)[i] = pupil.attendance["total_missed"]
+                    self._get_pupil_object(pupil.name)[i] = pupil.attendance.total_missed
 
     def set_labels(self, ax) -> None:
         ax.set_ylabel('Praleistų pamokų kiekis')
@@ -472,7 +472,7 @@ class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
         for i, summary in enumerate(self.summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
             for j, pupil in enumerate(summary.pupils):
-                self.pupil_averages[j][i] = pupil.attendance["total_missed"]
+                self.pupil_averages[j][i] = pupil.attendance.total_missed
 
     def _compute_class_averages(self) -> List[Optional[float]]:
 
