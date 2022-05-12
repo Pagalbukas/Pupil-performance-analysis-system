@@ -15,6 +15,7 @@ class Settings:
         hide_names: bool
         flip_names: bool
         last_ver: Optional[List[int]]
+        outlined_values: bool
 
     def __init__(self, auto_load: bool = True) -> None:
         if auto_load:
@@ -27,6 +28,7 @@ class Settings:
         self.hide_names = data.get("hide_names", False)
         self.flip_names = data.get("flip_names", False)
         self.last_ver = data.get("last_ver")
+        self.outlined_values = data.get("outlined_values", True)
 
     def _serialize(self) -> str:
         return json.dumps({
@@ -35,7 +37,8 @@ class Settings:
             "debugging": self.debugging,
             "hide_names": self.hide_names,
             "flip_names": self.flip_names,
-            "last_ver": self.last_ver
+            "last_ver": self.last_ver,
+            "outlined_values": self.outlined_values
         })
 
     def _xor_bytes(self, data: bytes) -> bytes:

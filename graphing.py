@@ -10,6 +10,7 @@ matplotlib.use('QtAgg')
 
 import matplotlib.cm as mplcm # type: ignore # noqa: E402
 import matplotlib.colors as colors # type: ignore # noqa: E402
+import matplotlib.patheffects as path_effects # type: ignore # noqa: E402
 
 # For tweaking the default UI
 from matplotlib.backend_bases import PickEvent # type: ignore # noqa: E402
@@ -147,8 +148,15 @@ class BaseGraph:
                 annotation = ax.annotate(
                     str(digit).replace('.', ','),
                     xy=(x_values[j], digit),
+                    color='white' if self.app.settings.outlined_values else 'black',
                     ha="center", va="center"
                 )
+                if self.app.settings.outlined_values:
+                    # https://matplotlib.org/stable/tutorials/advanced/patheffects_guide.html#making-an-artist-stand-out
+                    annotation.set_path_effects([
+                        path_effects.Stroke(linewidth=2, foreground='black'),
+                        path_effects.Normal()
+                    ])
                 annotations[j] = annotation
             line_bound_annotations[line] = annotations
             lines.append(line)
