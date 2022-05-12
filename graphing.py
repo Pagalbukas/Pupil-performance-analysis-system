@@ -21,6 +21,8 @@ from matplotlib.legend_handler import HandlerLine2D # type: ignore # noqa: E402
 from matplotlib.lines import Line2D # type: ignore # noqa: E402
 from typing import TYPE_CHECKING, Dict, Union # noqa: E402
 
+from errors import GraphingError
+
 if TYPE_CHECKING:
     from app import App
     from summaries import ClassPeriodReportSummary, ClassSemesterReportSummary
@@ -458,7 +460,7 @@ class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):
         try:
             return [round(s / t, 2) for s, t in averages]
         except ZeroDivisionError:
-            raise RuntimeError("Klasė neturi jokių pažymių, kad būtų galima piešti grafiką!")
+            raise GraphingError("Klasė neturi jokių pažymių, kad būtų galima piešti grafiką!")
 
     def get_graph_values(self) -> List[GraphValue]:
         """Returns a list of GraphValues which represent pupil averages."""
@@ -584,5 +586,5 @@ class PupilSubjectPeriodicAveragesGraph(AbstractPupilAveragesGraph):
                 continue
             values.append(GraphValue(name, marks))
         if len(values) == 0:
-            raise RuntimeError("Mokinys neturi jokių pažymių, kad būtų galima piešti grafiką!")
+            raise GraphingError("Mokinys neturi jokių pažymių, kad būtų galima piešti grafiką!")
         return values

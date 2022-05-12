@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QScreen, QIcon, QKeyEvent
 from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
-from requests.exceptions import RequestException # type: ignore
 from typing import List, Optional, Tuple
 
 from errors import ParsingError
@@ -128,12 +127,6 @@ class LoginTaskWorker(QObject):
         # Do the actual login request
         try:
             logged_in = self.app.client.login(self.username, self.password)
-        except RequestException as e:
-            logger.exception(e)
-            return self.error.emit((
-                "Prisijungiant įvyko nenumatyta prašymo klaida.\n"
-                "Patikrinkite savo interneto ryšį ir bandykite dar kartą vėliau."
-            ))
         except Exception as e:
             logger.exception(e)
             return self.error.emit(str(e))
@@ -148,12 +141,6 @@ class LoginTaskWorker(QObject):
         # Obtain filtered roles while at it and verify that user has the rights
         try:
             roles = self.app.client.get_filtered_user_roles()
-        except RequestException as e:
-            logger.exception(e)
-            return self.error.emit((
-                "Prisijungiant įvyko nenumatyta prašymo klaida.\n"
-                "Patikrinkite savo interneto ryšį ir bandykite dar kartą vėliau."
-            ))
         except Exception as e:
             logger.exception(e)
             return self.error.emit(str(e))
@@ -169,12 +156,6 @@ class LoginTaskWorker(QObject):
             if not roles[0].is_active:
                 try:
                     roles[0].change_role()
-                except RequestException as e:
-                    logger.exception(e)
-                    return self.error.emit((
-                        "Prisijungiant įvyko nenumatyta prašymo klaida.\n"
-                        "Patikrinkite savo interneto ryšį ir bandykite dar kartą vėliau."
-                    ))
                 except Exception as e:
                     logger.exception(e)
                     return self.error.emit(str(e))

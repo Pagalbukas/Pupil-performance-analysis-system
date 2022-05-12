@@ -9,6 +9,7 @@ from lxml.etree import _ElementTree, ElementBase # type: ignore
 from io import StringIO
 from requests.models import Response # type: ignore
 from typing import Dict, List, Optional, Tuple, Union
+from errors import ClientRequestError
 
 from files import get_temp_dir
 
@@ -147,9 +148,12 @@ class Client:
         no_cookies: bool = False,
         timeout: Optional[int] = 30
     ) -> Response:
-        if no_cookies:
-            return requests.request(method, url, data=data, headers=self.HEADERS, timeout=timeout)
-        return requests.request(method, url, data=data, headers=self.HEADERS, cookies=self.cookies, timeout=timeout)
+        try:
+            if no_cookies:
+                return requests.request(method, url, data=data, headers=self.HEADERS, timeout=timeout)
+            return requests.request(method, url, data=data, headers=self.HEADERS, cookies=self.cookies, timeout=timeout)
+        except requests.RequestException:
+            raise ClientRequestError
 
     def logout(self) -> None:
         """Destroys the client session and clears cache."""

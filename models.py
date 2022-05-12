@@ -6,12 +6,6 @@ from files import get_ignored_item_filters
 
 IGNORED_ITEM_FILTERS = get_ignored_item_filters()
 
-class AttendanceDict(TypedDict):
-    total_missed: int
-    justified_due_illness: int
-    justified_due_other: int
-    not_justified: int
-
 class Attendance:
 
     def __init__(
