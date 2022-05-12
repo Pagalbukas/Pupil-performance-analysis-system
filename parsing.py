@@ -2,24 +2,10 @@ import datetime
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
+from errors import InconclusiveResourceError, InvalidResourceTypeError
 from reading import SpreadsheetReader
 from models import Attendance, Mark, UnifiedPupil, UnifiedSubject
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
-
-class ParsingError(Exception):
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
-
-class InvalidResourceTypeError(ParsingError):
-    def __init__(self) -> None:
-        super().__init__("Pateiktas ataskaitos tipas yra netinkamas!")
-
-class InconclusiveResourceError(ParsingError):
-    def __init__(self) -> None:
-        super().__init__((
-            "Trūksta duomenų, suvestinė yra nepilna. "
-            "Įsitikinkite, ar pusmečio/trimestro įvertinimai yra teisingi!"
-        ))
 
 class BaseParser:
 

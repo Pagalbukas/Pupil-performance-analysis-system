@@ -19,13 +19,14 @@ from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
 from requests.exceptions import RequestException # type: ignore
 from typing import List, Optional, Tuple
 
+from errors import ParsingError
 from files import get_data_dir, get_home_dir, get_log_file, open_path
 from graphing import (
     PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
     UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph
 )
 from mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class # type: ignore
-from parsing import PupilSemesterReportParser, PupilPeriodicReportParser, ParsingError
+from parsing import PupilSemesterReportParser, PupilPeriodicReportParser
 from settings import Settings
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
