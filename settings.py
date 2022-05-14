@@ -16,6 +16,8 @@ class Settings:
         flip_names: bool
         last_ver: Optional[List[int]]
         outlined_values: bool
+        corner_legend: bool
+        styled_colouring: bool
 
     def __init__(self, auto_load: bool = True) -> None:
         if auto_load:
@@ -29,6 +31,8 @@ class Settings:
         self.flip_names = data.get("flip_names", False)
         self.last_ver = data.get("last_ver")
         self.outlined_values = data.get("outlined_values", True)
+        self.corner_legend = data.get("corner_legend", True)
+        self.styled_colouring = data.get("styled_colouring", True)
 
     def _serialize(self) -> str:
         return json.dumps({
@@ -38,7 +42,9 @@ class Settings:
             "hide_names": self.hide_names,
             "flip_names": self.flip_names,
             "last_ver": self.last_ver,
-            "outlined_values": self.outlined_values
+            "outlined_values": self.outlined_values,
+            "corner_legend": self.corner_legend,
+            "styled_colouring": self.styled_colouring
         })
 
     def _xor_bytes(self, data: bytes) -> bytes:

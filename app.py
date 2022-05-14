@@ -293,7 +293,7 @@ class PupilSelectionWidget(QWidget):
             return
         try:
             graph = PupilSubjectPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
-            graph.display(use_experimental_legend=True)
+            graph.display()
         except Exception as e:
             logger.exception(e)
             return self.app.show_error_box(str(e))
@@ -303,7 +303,7 @@ class PupilSelectionWidget(QWidget):
             return
         try:
             graph = PupilPeriodicAttendanceGraph(self.app, self.summaries, self.selected_index)
-            graph.display(use_experimental_legend=True)
+            graph.display()
         except Exception as e:
             logger.exception(e)
             return self.app.show_error_box(str(e))
@@ -313,7 +313,7 @@ class PupilSelectionWidget(QWidget):
             return
         try:
             graph = PupilPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
-            graph.display(use_experimental_legend=True)
+            graph.display()
         except Exception as e:
             logger.exception(e)
             return self.app.show_error_box(str(e))
@@ -940,7 +940,7 @@ class App(QWidget):
     def display_aggregated_semester_graph(self, summaries: List[ClassSemesterReportSummary]) -> None:
         try:
             graph = UnifiedClassAveragesGraph(self, summaries)
-            graph.display(use_experimental_legend=True)
+            graph.display()
         except Exception as e:
             logger.exception(e)
             return self.show_error_box(str(e))
@@ -948,7 +948,7 @@ class App(QWidget):
     def display_aggregated_monthly_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
         try:
             graph = UnifiedClassAveragesGraph(self, summaries)
-            graph.display(use_experimental_legend=True)
+            graph.display()
         except Exception as e:
             logger.exception(e)
             return self.show_error_box(str(e))
@@ -957,7 +957,7 @@ class App(QWidget):
     def display_attendance_monthly_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
         try:
             graph = UnifiedClassAttendanceGraph(self, summaries)
-            graph.display(use_experimental_legend=True)
+            graph.display()
         except Exception as e:
             logger.exception(e)
             return self.show_error_box(str(e))

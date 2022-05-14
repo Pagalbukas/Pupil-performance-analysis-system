@@ -153,9 +153,7 @@ class BaseGraph:
         return figure
 
     def display(
-        self,
-        use_styled_colouring: bool = True,
-        use_experimental_legend: bool = False
+        self
     ) -> None:
         """Instructs matplotlib to display a graph."""
 
@@ -170,7 +168,7 @@ class BaseGraph:
 
         # Set unique colors for lines in a rainbow fashion
         cm = plt.get_cmap('gist_rainbow')
-        if not use_styled_colouring:
+        if not self.app.settings.styled_colouring:
             c_normalised = colors.Normalize(vmin=0, vmax=y_count - 1)
             scalar_map = mplcm.ScalarMappable(norm=c_normalised, cmap=cm)
             ax.set_prop_cycle(color=[scalar_map.to_rgba(i) for i in range(y_count)])
@@ -188,7 +186,7 @@ class BaseGraph:
             # Draw a line of student averages
             line = ax.plot(x_values, val.values, marker='o', label=val.label)[0]
 
-            if use_styled_colouring:
+            if self.app.settings.styled_colouring:
                 # Adapted from https://stackoverflow.com/a/44937195
                 line.set_color(cm(i // self.STYLE_COUNT * float(self.STYLE_COUNT) / y_count))
                 line.set_linestyle(self.LINE_STYLES[i % self.STYLE_COUNT])
@@ -219,7 +217,7 @@ class BaseGraph:
         self.set_labels(ax)
 
         # Adjusts the plot size
-        if use_experimental_legend:
+        if self.app.settings.corner_legend:
             box = ax.get_position()
             ax.set_position([box.x0, box.y0, box.width * 0.95, box.height])
 
@@ -230,7 +228,7 @@ class BaseGraph:
             handle.set_marker("")
 
         # Moves the legend outside of the plot
-        if use_experimental_legend:
+        if self.app.settings.corner_legend:
             leg = plt.legend(
                 handler_map={plt.Line2D: HandlerLine2D(update_func=update_prop)},
                 loc='center left',
@@ -540,12 +538,10 @@ class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):
 
     def display(
         self,
-        use_styled_colouring: bool = True,
-        use_experimental_legend: bool = False,
         show_class_average: bool = True
     ) -> None:
         self.graph_class = show_class_average
-        return super().display(use_styled_colouring, use_experimental_legend)
+        return super().display()
 
 class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
     """This class implements pupil periodic attendance graph."""
@@ -602,12 +598,10 @@ class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
 
     def display(
         self,
-        use_styled_colouring: bool = True,
-        use_experimental_legend: bool = False,
         show_class_average: bool = True
     ) -> None:
         self.graph_class = show_class_average
-        return super().display(use_styled_colouring, use_experimental_legend)
+        return super().display()
 
 class PupilSubjectPeriodicAveragesGraph(AbstractPupilAveragesGraph):
     """This class implements pupil subject periodic averages graph."""
