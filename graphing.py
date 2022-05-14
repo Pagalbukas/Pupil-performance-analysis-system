@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import logging
 import math
 import os
@@ -59,7 +60,7 @@ def save_figure(self, *args):
         a default filename.
         """
         basename = (self.canvas.manager.get_window_title() if self.canvas.manager is not None else '')
-        return (basename or 'image').replace(' ', '_')
+        return (basename or 'image').replace(' ', '_') + f'_{int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())}'
 
     start = os.path.join(startpath, get_default_filename() + ".pdf")
     filters = []
