@@ -1,25 +1,38 @@
 from __future__ import annotations
 
-import math
-import matplotlib # type: ignore
-import os
 import logging
+import math
+import os
+
+import matplotlib # type: ignore
 
 # Tell matplotlib to use QtAgg explicitly
 matplotlib.use('QtAgg')
 
-import matplotlib.cm as mplcm # type: ignore # noqa: E402
-import matplotlib.colors as colors # type: ignore # noqa: E402
-import matplotlib.patheffects as path_effects # type: ignore # noqa: E402
+from random import choice, shuffle
+from types import MethodType
+from typing import (
+    TYPE_CHECKING,
+    Any, Dict, List,
+    Optional, Tuple, Union
+)
 
+import matplotlib.cm as mplcm  # type: ignore # noqa: E402
+import matplotlib.colors as colors  # type: ignore # noqa: E402
+import matplotlib.patheffects as path_effects  # type: ignore # noqa: E402
+import matplotlib.pyplot as plt  # type: ignore # noqa: E402
 # For tweaking the default UI
-from matplotlib.backend_bases import PickEvent # type: ignore # noqa: E402
+from matplotlib.backend_bases import PickEvent, NavigationToolbar2  # type: ignore # noqa: E402
+from matplotlib.backends.backend_qt import NavigationToolbar2QT  # type: ignore # noqa: E402
 # The modules exist, but for some reason, they are not picked up by Pylance
-from matplotlib.backends.qt_compat import QtWidgets, _getSaveFileName # type: ignore # noqa: E402
-from matplotlib.backends.backend_qt import NavigationToolbar2QT # type: ignore # noqa: E402
-from matplotlib.legend_handler import HandlerLine2D # type: ignore # noqa: E402
-from matplotlib.lines import Line2D # type: ignore # noqa: E402
-from typing import TYPE_CHECKING, Dict, Union # noqa: E402
+from matplotlib.backends.qt_compat import (  # type: ignore # noqa: E402
+    QtWidgets, _getSaveFileName
+)
+from matplotlib.figure import Figure  # type: ignore # noqa: E402
+from matplotlib.legend_handler import HandlerLine2D  # type: ignore # noqa: E402
+from matplotlib.lines import Line2D  # type: ignore # noqa: E402
+from matplotlib.pyplot import Axes  # type: ignore # noqa: E402
+from matplotlib.text import Annotation  # type: ignore # noqa: E402
 
 from errors import GraphingError
 
@@ -32,28 +45,25 @@ logger = logging.getLogger("analizatorius")
 # Modify default save figure to have more fine-grained control over available file formats
 def save_figure(self, *args):
     filetypes = {
-        'Joint Photographic Experts Group': ['jpeg', 'jpg'],
-        'Portable Document Format': ['pdf'],
-        'Portable Network Graphics': ['png']
+        'PDF failas (rekomenduojama)': ['pdf'],
+        'Nuotrauka (aukštos kokybės)': ['png'],
+        'Nuotrauka (žemos kokybės)': ['jpeg', 'jpg']
     }
-
-    sorted_filetypes = sorted(filetypes.items())
-    default_filetype = self.canvas.get_default_filetype()
 
     startpath = os.path.expanduser(matplotlib.rcParams['savefig.directory'])
     start = os.path.join(startpath, self.canvas.get_default_filename())
     filters = []
     selectedFilter = None
-    for name, exts in sorted_filetypes:
+    for name, exts in filetypes.items():
         exts_list = " ".join(['*.%s' % ext for ext in exts])
         filter = '%s (%s)' % (name, exts_list)
-        if default_filetype in exts:
+        if "pdf" in exts:
             selectedFilter = filter
         filters.append(filter)
     filters = ';;'.join(filters)
 
     fname, filter = _getSaveFileName(
-        self.canvas.parent(), "Choose a filename to save to", start,
+        self.canvas.parent(), "Pasirinkite failo vardą ir vietą, kur jį išsaugosite", start,
         filters, selectedFilter)
 
     if fname:
@@ -65,17 +75,14 @@ def save_figure(self, *args):
             self.canvas.figure.savefig(fname)
         except Exception as e:
             QtWidgets.QMessageBox.critical(
-                self, "Error saving file", str(e),
+                self, "Failo išsaugoti nepavyko", str(e),
                 QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.NoButton)
 
-
-NavigationToolbar2QT.save_figure = save_figure
-
-# Load the plot last for certain features to work
-import matplotlib.pyplot as plt # type: ignore # noqa: E402
-
-from random import choice, shuffle # noqa: E402
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple # noqa: E402
+def home(self: NavigationToolbar2, *args):
+    self._nav_stack.home()
+    self.set_history_buttons()
+    print("Called home button, the test_variable value is", getattr(self.canvas.toolbar, "test_variable"))
+    self._update_view()
 
 class GraphValue:
 
@@ -103,12 +110,50 @@ class BaseGraph:
     def window_title(self) -> str:
         return self.title.replace("\n", " ")
 
-    def set_labels(self, ax) -> None:
+    def set_labels(self, ax: Axes) -> None:
         ax.set_ylabel('Vidurkis')
         ax.set_xlabel('Laikotarpis')
 
     def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
         raise NotImplementedError
+
+    def _setup_figure(self, figure: Figure) -> Figure:
+        """Sets up a custom matplotlib figure, the Qt toolbar to be more precise."""
+        toolbar: NavigationToolbar2QT = figure.canvas.toolbar
+
+        # Modify instance methods
+        toolbar.save_figure = MethodType(save_figure, toolbar)
+        toolbar.home = MethodType(home, toolbar)
+
+        # A dict containing toolbar item locale mapping and visibility settings
+        item_locales = {
+            "Home": ("Pradžia", "Nustatyti atgal į pradinę padėtį", True),
+            "Back": ("Atgal", "Grįžti atgal", True),
+            "Forward": ("Pirmyn", "Grįžti pirmyn", True),
+            "Pan": ("Pan", "Left button pans, Right button zooms\nx/y fixes axis, CTRL fixes aspect", False),
+            "Zoom": ("Zoom", "Zoom to rectangle\nx/y fixes axis", True),
+            "Subplots": ("Subplots", "Configure subplots", True),
+            "Customize": ("Customize", "Edit axis, curve and image parameters", False),
+            "Save": ("Išsaugoti", "Išsaugoti grafiką", True)
+        }
+
+        # Apply the said values to the toolbar actions in this loop
+        for action in toolbar.actions():
+            if action.text == "":
+                continue
+            
+            val = item_locales.get(action.text(), None)
+            if val is not None:
+                name, tooltip, show = val
+                action.setText(name)
+                action.setToolTip(tooltip)
+                action.setVisible(show)            
+        
+        # Strictly testing only of sharing values between different objects
+        # The idea would be to share legend data so pressing home could reset
+        # it all (turn on all axes again)
+        setattr(toolbar, "test_variable", self.app.settings.outlined_values)
+        return figure
 
     def display(
         self,
@@ -124,6 +169,8 @@ class BaseGraph:
         # Create a plot and a figure
         fig, ax = plt.subplots()
 
+        self._setup_figure(fig)
+
         # Set unique colors for lines in a rainbow fashion
         cm = plt.get_cmap('gist_rainbow')
         if not use_styled_colouring:
@@ -133,11 +180,11 @@ class BaseGraph:
 
         # Line object: [array of annotations]
         # Used for removing annotations when hiding lines
-        line_bound_annotations = {}
+        line_bound_annotations: Dict[Line2D, List[Annotation]] = {}
 
         # Array of line objects
         # Used for selecting line objects
-        lines = []
+        lines: List[Line2D] = []
 
         # Graph actual data
         for i, val in enumerate(y_values):
@@ -150,7 +197,7 @@ class BaseGraph:
                 line.set_linestyle(self.LINE_STYLES[i % self.STYLE_COUNT])
 
             # Create an array of annotations and draw them
-            annotations = [None] * x_count
+            annotations: List[Annotation] = [None] * x_count
             for j, digit in enumerate(val.values):
                 if digit is None:
                     continue
@@ -231,6 +278,10 @@ class BaseGraph:
 
         fig.suptitle(self.title, fontsize=16)
         plt.gcf().canvas.set_window_title(self.window_title)
+
+        # Automatically maximise the window
+        plt.get_current_fig_manager().window.showMaximized()
+
         plt.show()
 
 
