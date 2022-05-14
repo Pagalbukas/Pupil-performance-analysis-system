@@ -51,7 +51,17 @@ def save_figure(self, *args):
     }
 
     startpath = os.path.expanduser(matplotlib.rcParams['savefig.directory'])
-    start = os.path.join(startpath, self.canvas.get_default_filename())
+
+
+    def get_default_filename():
+        """
+        Return a string, which includes extension, suitable for use as
+        a default filename.
+        """
+        basename = (self.canvas.manager.get_window_title() if self.canvas.manager is not None else '')
+        return (basename or 'image').replace(' ', '_')
+
+    start = os.path.join(startpath, get_default_filename() + ".pdf")
     filters = []
     selectedFilter = None
     for name, exts in filetypes.items():
