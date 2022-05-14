@@ -502,7 +502,7 @@ class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):
                 self.pupil_averages[j][i] = pupil.average.clean
 
     def _compute_class_averages(self) -> List[Optional[float]]:
-        averages = [[0, 0] for _ in range(len(self.period_names))]
+        averages: List[List[Union[int, float]]] = [[0, 0] for _ in range(len(self.period_names))]
         for pupil in self.pupil_averages:
             for i, average in enumerate(pupil):
                 if average is not None:
@@ -563,7 +563,7 @@ class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
                 return math.trunc(rounded)
             return rounded
 
-        averages = [[0, 0] for _ in range(len(self.period_names))]
+        averages: List[List[Union[int, float]]] = [[0, 0] for _ in range(len(self.period_names))]
         for pupil in self.pupil_averages:
             for i, average in enumerate(pupil):
                 if average is not None:
