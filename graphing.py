@@ -81,7 +81,8 @@ def save_figure(self, *args):
 def home(self: NavigationToolbar2, *args):
     self._nav_stack.home()
     self.set_history_buttons()
-    print("Called home button, the test_variable value is", getattr(self.canvas.toolbar, "test_variable"))
+    update_line_visibility = getattr(self.canvas.toolbar, "update_line_visibility")
+    update_line_visibility()
     self._update_view()
 
 class GraphValue:
@@ -149,10 +150,6 @@ class BaseGraph:
                 action.setToolTip(tooltip)
                 action.setVisible(show)            
         
-        # Strictly testing only of sharing values between different objects
-        # The idea would be to share legend data so pressing home could reset
-        # it all (turn on all axes again)
-        setattr(toolbar, "test_variable", self.app.settings.outlined_values)
         return figure
 
     def display(
@@ -270,8 +267,29 @@ class BaseGraph:
             legline.set_alpha(1.0 if visible else 0.2)
             fig.canvas.draw()
 
+        def update_line_visibility():
+            # Set every line annotation on the graph to be visible
+            for line in line_bound_annotations.keys():
+                for annotation in line_bound_annotations[line]:
+                    if annotation is not None:
+                        annotation.set(visible=True)
+
+            # Set every line on graph to be visible
+            for line in lined.keys():
+                lined[line].set_visible(True)
+            
+            # Set every legend line to default alpha value
+            for legline in leg.get_lines():
+                legline.set_alpha(1.0)
+
+            # Ending draw call to update view
+            fig.canvas.draw()
+
         # Bind the pick_event event
         fig.canvas.mpl_connect('pick_event', on_pick)
+        
+        # Add update_line_visibility method to the toolbar
+        setattr(fig.canvas.toolbar, "update_line_visibility", update_line_visibility)
 
         # Create a grid of values
         ax.grid(True)
