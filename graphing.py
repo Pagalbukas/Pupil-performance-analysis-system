@@ -142,8 +142,8 @@ class BaseGraph:
             "Back": ("Atgal", "Grįžti atgal", True),
             "Forward": ("Pirmyn", "Grįžti pirmyn", True),
             "Pan": ("Pan", "Left button pans, Right button zooms\nx/y fixes axis, CTRL fixes aspect", False),
-            "Zoom": ("Zoom", "Zoom to rectangle\nx/y fixes axis", True),
-            "Subplots": ("Subplots", "Configure subplots", True),
+            "Zoom": ("Padidinti", "Padidinti iki stačiakampio\nx/y fiksuoja ašis", True),
+            "Subplots": ("Grafikas", "Redaguoti grafiką", True),
             "Customize": ("Customize", "Edit axis, curve and image parameters", False),
             "Save": ("Išsaugoti", "Išsaugoti grafiką", True)
         }
