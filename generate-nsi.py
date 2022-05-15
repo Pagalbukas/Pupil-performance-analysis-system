@@ -176,11 +176,15 @@ def generate_definitions() -> str:
 
 def main(args: List[str]):
 
-    if len(args) != 2:
+    if len(args) < 2:
         sys.exit("Distribution directory not specified")
 
     if not os.path.exists(args[1]):
         sys.exit("Specified directory does not exist")
+
+    if len(args) == 3:
+        DEFINITIONS['INSTALLER_NAME'] = args[2]
+        print(f"Set installer name to '{args[2]}'")
 
     script = NSIScript()
 

@@ -32,10 +32,11 @@ jobs:
           main.py
       - name: Copy data files
         run: |
-          xcopy data main.dist\data /E /H /I
+          xcopy data main.dist\data /E /H /I /Y
+          xcopy icon.png main.dist\icon.png* /Y
       - name: Create a NSI script
         run: |
-          python generate-nsi.py main.dist
+          python generate-nsi.py main.dist Install-Analizatorius-Nuitka.exe
       - name: Create installer
         uses: joncloud/makensis-action@v3.6
         with:
@@ -44,5 +45,5 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v3
         with:
-            name: Analizatorius-Nuitka
-            path: Analizatorius.exe
+            name: Mokinių pasiekimų ir lankomumo stebėsenos sistema
+            path: Install-Analizatorius-Nuitka.exe

@@ -19,7 +19,7 @@ jobs:
           pyinstaller main.spec
       - name: Create a NSI script
         run: |
-          python generate-nsi.py dist\main
+          python generate-nsi.py dist\main Install-Analizatorius-PyInstaller.exe
       - name: Create installer
         uses: joncloud/makensis-action@v3.6
         with:
@@ -28,5 +28,5 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v3
         with:
-            name: Analizatorius-PyInstaller
-            path: Analizatorius.exe
+            name: Mokinių pasiekimų ir lankomumo stebėsenos sistema
+            path: Install-Analizatorius-PyInstaller.exe
