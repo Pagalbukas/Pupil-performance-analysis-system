@@ -3,7 +3,7 @@ import sys
 from typing import List
 
 DEFINITIONS = {
-    "APP_NAME": "Analizatorius",
+    "APP_NAME": "Mokinių pasiekimų ir lankomumo stebėsenos sistema",
     "COMP_NAME": "Dominykas Svetikas",
     "VERSION": "1.0.1.0",
     "COPYRIGHT": "Dominykas Svetikas © 2022",
@@ -60,6 +60,8 @@ class NSIScript:
             '!define MUI_LANGDLL_REGISTRY_KEY "${UNINSTALL_PATH}"\n'
             '!define MUI_LANGDLL_REGISTRY_VALUENAME "Installer Language"\n'
 
+            '!define MUI_WELCOMEPAGE_TITLE_3LINES\n'
+            '!define MUI_FINISHPAGE_TITLE_3LINES\n'
             '!insertmacro MUI_PAGE_WELCOME\n'
 
             '!ifdef LICENSE_TXT\n'
@@ -70,7 +72,7 @@ class NSIScript:
 
             '!ifdef REG_START_MENU\n'
             '!define MUI_STARTMENUPAGE_NODISABLE\n'
-            '!define MUI_STARTMENUPAGE_DEFAULTFOLDER "Analizatorius"\n'
+            '!define MUI_STARTMENUPAGE_DEFAULTFOLDER "${APP_NAME}"\n'
             '!define MUI_STARTMENUPAGE_REGISTRY_ROOT "${REG_ROOT}"\n'
             '!define MUI_STARTMENUPAGE_REGISTRY_KEY "${UNINSTALL_PATH}"\n'
             '!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "${REG_START_MENU}"\n'
@@ -79,16 +81,13 @@ class NSIScript:
 
             '!insertmacro MUI_PAGE_INSTFILES\n'
             '!insertmacro MUI_PAGE_FINISH\n'
+            '!define MUI_WELCOMEPAGE_TITLE_3LINES\n'
+            '!define MUI_FINISHPAGE_TITLE_3LINES\n'
             '!insertmacro MUI_UNPAGE_CONFIRM\n'
             '!insertmacro MUI_UNPAGE_INSTFILES\n'
             '!insertmacro MUI_UNPAGE_FINISH\n'
-            '!insertmacro MUI_LANGUAGE "English"\n'
             '!insertmacro MUI_LANGUAGE "Lithuanian"\n'
             '!insertmacro MUI_RESERVEFILE_LANGDLL\n'
-
-            'Function .onInit\n'
-            '!insertmacro MUI_LANGDLL_DISPLAY\n'
-            'FunctionEnd\n'
         )
 
     def set_install_registry(self):
@@ -137,9 +136,6 @@ class NSIScript:
             '!ifndef REG_START_MENU\n'
             'Delete "$SMPROGRAMS\\${APP_NAME}\\${APP_NAME}.lnk"\n'
             'Delete "$SMPROGRAMS\\${APP_NAME}\\Uninstall ${APP_NAME}.lnk"\n'
-            '!ifdef WEB_SITE\n'
-            'Delete "$SMPROGRAMS\\${APP_NAME}\\${APP_NAME} Website.lnk"\n'
-            '!endif\n'
             'Delete "$DESKTOP\\${APP_NAME}.lnk"\n'
 
             'RmDir "$SMPROGRAMS\\${APP_NAME}"\n'
@@ -230,13 +226,8 @@ def main(args: List[str]):
 
     script.set_uninstall_registry()
 
-    script.string += (
-        'Function un.onInit\n'
-        '!insertmacro MUI_UNGETLANGUAGE\n'
-        'FunctionEnd\n'
-    )
-
-    with open("install-script.nsi", encoding="utf-8", mode="w") as f:
+    # This is required for NSIS to parse UTF-8 strings, the BOM signature
+    with open("install-script.nsi", encoding='utf-8-sig', mode="w") as f:
         f.write(script.string)
 
 if __name__ == "__main__":
