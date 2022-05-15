@@ -29,7 +29,7 @@ from parsing import PupilSemesterReportParser, PupilPeriodicReportParser
 from settings import Settings
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
-__VERSION__ = (1, 1, 0)
+__VERSION__ = (1, 1, 1)
 REPO_URL = "https://github.com/Pagalbukas/Pupil-performance-analysis-system"
 
 logger = logging.getLogger("analizatorius")
