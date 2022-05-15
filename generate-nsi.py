@@ -218,7 +218,8 @@ def main(args: List[str]):
     )
     for file in script.file_list:
         script.remove_file(file.replace(args[1], "$INSTDIR", 1))
-    for dir in script.directory_list:
+
+    for dir in  sorted(script.directory_list, reverse=True):
         path = dir.replace(args[1], "$INSTDIR", 1)
         if path != "$INSTDIR":
             script.remove_dir(path)
