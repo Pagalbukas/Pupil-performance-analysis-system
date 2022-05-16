@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import sys
 import timeit
 import logging
@@ -60,7 +61,7 @@ class GenerateReportWorker(QObject):
         self.app = app
         self.class_o = class_o
 
-    @Slot()
+    @Slot() # type: ignore
     def generate_periodic(self):
         try:
             generator = self.app.client.get_class_averages_report_options(self.class_o.id)
@@ -75,7 +76,7 @@ class GenerateReportWorker(QObject):
             return self.error.emit(str(e))
         self.success.emit(files)
 
-    @Slot()
+    @Slot() # type: ignore
     def generate_monthly(self):
         try:
             generator = self.app.client.get_class_averages_report_options(self.class_o.id)
@@ -99,7 +100,7 @@ class ChangeRoleWorker(QObject):
         self.app = app
         self.index = role_index
 
-    @Slot()
+    @Slot() # type: ignore
     def change_role(self):
         try:
             self.app.client.get_filtered_user_roles()[self.index].change_role()
@@ -118,7 +119,7 @@ class LoginTaskWorker(QObject):
         self.username = username
         self.password = password
 
-    @Slot()
+    @Slot() # type: ignore
     def login(self):
         # Should never be called
         if self.app.client.is_logged_in:
@@ -424,8 +425,8 @@ class LoginWidget(QWidget):
         self.login_worker.moveToThread(self.login_thread)
 
         # Connect signals
-        self.login_worker.error.connect(self.on_error_signal)
-        self.login_worker.success.connect(self.on_success_signal)
+        self.login_worker.error.connect(self.on_error_signal) # type: ignore
+        self.login_worker.success.connect(self.on_success_signal) # type: ignore
         self.login_thread.started.connect(self.login_worker.login)
 
         self.login_thread.start()
@@ -510,8 +511,8 @@ class SelectUserRoleWidget(QWidget):
         self.worker.moveToThread(self.worker_thread)
 
         # Connect signals
-        self.worker.error.connect(self.on_error_signal)
-        self.worker.success.connect(self.on_success_signal)
+        self.worker.error.connect(self.on_error_signal) # type: ignore
+        self.worker.success.connect(self.on_success_signal) # type: ignore
         self.worker_thread.started.connect(self.worker.change_role)
 
         self.worker_thread.start()
@@ -636,9 +637,9 @@ class SelectClassWidget(QWidget):
         self.worker = GenerateReportWorker(self.app, self.classes[self.selected_index])
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
-        self.worker.error.connect(self.on_error_signal)
-        self.worker.success.connect(self.on_success_signal)
-        self.worker.progress.connect(self.on_progress_signal)
+        self.worker.error.connect(self.on_error_signal) # type: ignore
+        self.worker.success.connect(self.on_success_signal) # type: ignore
+        self.worker.progress.connect(self.on_progress_signal) # type: ignore
         self.worker_thread.started.connect(self.worker.generate_periodic)
         self.worker_thread.start()
 
@@ -649,9 +650,9 @@ class SelectClassWidget(QWidget):
         self.worker = GenerateReportWorker(self.app, self.classes[self.selected_index])
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
-        self.worker.error.connect(self.on_error_signal)
-        self.worker.success.connect(self.on_success_signal)
-        self.worker.progress.connect(self.on_progress_signal)
+        self.worker.error.connect(self.on_error_signal) # type: ignore
+        self.worker.success.connect(self.on_success_signal) # type: ignore
+        self.worker.progress.connect(self.on_progress_signal) # type: ignore
         self.worker_thread.started.connect(self.worker.generate_monthly)
         self.worker_thread.start()
 
@@ -749,6 +750,7 @@ class App(QWidget):
     def __init__(self, settings: Settings):
         super().__init__()
         logger.info("App instance initialised")
+        logger.info(f'Running on {platform.system()} v{platform.version()} [{platform.machine()}]')
 
         self.settings = settings
         self.debug = settings.debugging

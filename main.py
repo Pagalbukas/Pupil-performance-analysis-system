@@ -1,7 +1,6 @@
 import sys
 
 from PySide6.QtWidgets import QApplication
-
 from app import App
 from settings import Settings
 
