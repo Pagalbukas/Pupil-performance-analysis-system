@@ -30,7 +30,7 @@ from parsing import PupilSemesterReportParser, PupilPeriodicReportParser
 from settings import Settings
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
-__VERSION__ = (1, 1, 1)
+__VERSION__ = (1, 1, 2)
 REPO_URL = "https://github.com/Pagalbukas/Pupil-performance-analysis-system"
 
 logger = logging.getLogger("analizatorius")
@@ -766,7 +766,7 @@ class App(QWidget):
         self.view_aggregated = False
         self.view_attendance = False
 
-        self.setWindowTitle('Mokinių pasiekimų ir lankomumo analizatorius')
+        self.setWindowTitle('Mokinių pasiekimų ir lankomumo stebėsenos sistema')
         self.setWindowIcon(QIcon('icon.png'))
 
         self.left = 10
