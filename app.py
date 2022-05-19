@@ -289,11 +289,15 @@ class PupilSelectionWidget(QWidget):
         self.attendance_button.setEnabled(False)
         self.aggregated_button.setEnabled(False)
 
+    def resolve_pupil_name(self) -> str:
+        assert self.selected_index is not None
+        return self.summaries[-1].pupils[self.selected_index].name
+
     def display_subjects_graph(self) -> None:
         if self.selected_index is None:
             return
         try:
-            graph = PupilSubjectPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
+            graph = PupilSubjectPeriodicAveragesGraph(self.app, self.summaries, self.resolve_pupil_name())
             graph.display()
         except Exception as e:
             logger.exception(e)
@@ -303,7 +307,7 @@ class PupilSelectionWidget(QWidget):
         if self.selected_index is None:
             return
         try:
-            graph = PupilPeriodicAttendanceGraph(self.app, self.summaries, self.selected_index)
+            graph = PupilPeriodicAttendanceGraph(self.app, self.summaries, self.resolve_pupil_name())
             graph.display()
         except Exception as e:
             logger.exception(e)
@@ -313,7 +317,7 @@ class PupilSelectionWidget(QWidget):
         if self.selected_index is None:
             return
         try:
-            graph = PupilPeriodicAveragesGraph(self.app, self.summaries, self.selected_index)
+            graph = PupilPeriodicAveragesGraph(self.app, self.summaries, self.resolve_pupil_name())
             graph.display()
         except Exception as e:
             logger.exception(e)

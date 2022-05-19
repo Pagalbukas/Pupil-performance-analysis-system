@@ -39,6 +39,7 @@ from errors import GraphingError
 
 if TYPE_CHECKING:
     from app import App
+    from models import UnifiedPupil
     from summaries import ClassPeriodReportSummary, ClassSemesterReportSummary
 
 logger = logging.getLogger("analizatorius")
@@ -505,33 +506,44 @@ class AbstractPupilAveragesGraph(G):
 class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):
     """This class implements pupil periodic averages graph."""
 
-    def __init__(self, app: App, summaries: List[ClassPeriodReportSummary], pupil_idx: int) -> None:
-        self.pupil_idx = pupil_idx
+    def __init__(self, app: App, summaries: List[ClassPeriodReportSummary], pupil_name: str) -> None:
+        self.pupil_name = pupil_name
         self.pupils = summaries[-1].pupils
-        self.pupil_averages: List[List[Optional[float]]] = [
-            [None for _ in range(len(summaries))] for _ in range(len(self.pupils))
-        ]
+        self.averages: Dict[str, List[Optional[float]]] = {}
+
+        for p in self.pupils:
+            self.averages[p.name] = [None for _ in range(len(summaries))]
+
         super().__init__(app, summaries)
 
     @property
     def window_title(self) -> str:
         return "Mokinio bendras vidurkis"
 
+    @property
+    def pupil(self) -> UnifiedPupil:
+        pupils = [p for p in self.pupils if p.name == self.pupil_name]
+        if len(pupils) == 0:
+            raise GraphingError("Mokinys nurodytų vardu neegzistuoja?")
+        if len(pupils) > 1:
+            raise GraphingError("Yra 2 ar daugiau mokinių tokiu pat vardu!")
+        return pupils[0]
+
     def _load(self) -> None:
-        name = self.pupils[self.pupil_idx].name
+        name = self.pupil_name
         if self.app.settings.flip_names:
-            name = self.pupils[self.pupil_idx].sane_name
+            name = self.pupil.sane_name
 
         self._title = f'Mokinys: {name}\nBendras vidurkis\n{self.period}'
         for i, summary in enumerate(self.summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
-            for j, pupil in enumerate(summary.pupils):
-                self.pupil_averages[j][i] = pupil.average.clean
+            for pupil in summary.pupils:
+                self.averages[pupil.name][i] = pupil.average.clean
 
     def _compute_class_averages(self) -> List[Optional[float]]:
         averages: List[List[Union[int, float]]] = [[0, 0] for _ in range(len(self.period_names))]
-        for pupil in self.pupil_averages:
-            for i, average in enumerate(pupil):
+        for values in self.averages.values():
+            for i, average in enumerate(values):
                 if average is not None:
                     averages[i][0] += average
                     averages[i][1] += 1
@@ -542,7 +554,7 @@ class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):
 
     def get_graph_values(self) -> List[GraphValue]:
         """Returns a list of GraphValues which represent pupil averages."""
-        values = [GraphValue("Mokinio vidurkis", self.pupil_averages[self.pupil_idx])]
+        values = [GraphValue("Mokinio vidurkis", self.averages[self.pupil_name])]
         if self.graph_class:
             values.append(GraphValue("Klasės vidurkis", self._compute_class_averages()))
         return values
@@ -557,28 +569,39 @@ class PupilPeriodicAveragesGraph(AbstractPupilAveragesGraph):
 class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
     """This class implements pupil periodic attendance graph."""
 
-    def __init__(self, app: App, summaries: List[ClassPeriodReportSummary], pupil_idx: int) -> None:
-        self.pupil_idx = pupil_idx
+    def __init__(self, app: App, summaries: List[ClassPeriodReportSummary], pupil_name: str) -> None:
+        self.pupil_name = pupil_name
         self.pupils = summaries[-1].pupils
-        self.pupil_averages: List[List[Optional[float]]] = [
-            [None for _ in range(len(summaries))] for _ in range(len(self.pupils))
-        ]
+        self.averages: Dict[str, List[Optional[float]]] = {}
+
+        for p in self.pupils:
+            self.averages[p.name] = [None for _ in range(len(summaries))]
+
         super().__init__(app, summaries)
 
     @property
     def window_title(self) -> str:
         return "Mokinio lankomumas"
 
+    @property
+    def pupil(self) -> UnifiedPupil:
+        pupils = [p for p in self.pupils if p.name == self.pupil_name]
+        if len(pupils) == 0:
+            raise GraphingError("Mokinys nurodytų vardu neegzistuoja?")
+        if len(pupils) > 1:
+            raise GraphingError("Yra 2 ar daugiau mokinių tokiu pat vardu!")
+        return pupils[0]
+
     def _load(self) -> None:
-        name = self.pupils[self.pupil_idx].name
+        name = self.pupil_name
         if self.app.settings.flip_names:
-            name = self.pupils[self.pupil_idx].sane_name
+            name = self.pupil.sane_name
 
         self._title = f'Mokinys: {name}\nPraleistų pamokų kiekis\n{self.period}'
         for i, summary in enumerate(self.summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
-            for j, pupil in enumerate(summary.pupils):
-                self.pupil_averages[j][i] = pupil.attendance.total_missed
+            for pupil in summary.pupils:
+                self.averages[pupil.name][i] = pupil.attendance.total_missed
 
     def _compute_class_averages(self) -> List[Optional[float]]:
 
@@ -589,8 +612,8 @@ class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
             return rounded
 
         averages: List[List[Union[int, float]]] = [[0, 0] for _ in range(len(self.period_names))]
-        for pupil in self.pupil_averages:
-            for i, average in enumerate(pupil):
+        for values in self.averages.values():
+            for i, average in enumerate(values):
                 if average is not None:
                     averages[i][0] += average
                     averages[i][1] += 1
@@ -598,7 +621,7 @@ class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
 
     def get_graph_values(self) -> List[GraphValue]:
         """Returns a list of GraphValues which represent pupil averages."""
-        values = [GraphValue("Mokinio kiekis", self.pupil_averages[self.pupil_idx])]
+        values = [GraphValue("Mokinio kiekis", self.averages[self.pupil_name])]
         if self.graph_class:
             values.append(GraphValue("Klasės vidurkis", self._compute_class_averages()))
         return values
@@ -617,8 +640,8 @@ class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
 class PupilSubjectPeriodicAveragesGraph(AbstractPupilAveragesGraph):
     """This class implements pupil subject periodic averages graph."""
 
-    def __init__(self, app: App, summaries: List[ClassPeriodReportSummary], pupil_idx: int) -> None:
-        self.pupil_idx = pupil_idx
+    def __init__(self, app: App, summaries: List[ClassPeriodReportSummary], pupil_name: str) -> None:
+        self.pupil_name = pupil_name
         self.pupils = summaries[-1].pupils
         self.subjects: Dict[str, list]  = {}
         super().__init__(app, summaries)
@@ -634,20 +657,29 @@ class PupilSubjectPeriodicAveragesGraph(AbstractPupilAveragesGraph):
     def window_title(self) -> str:
         return "Mokinio dalykų vidurkis"
 
+    @property
+    def pupil(self) -> UnifiedPupil:
+        pupils = [p for p in self.pupils if p.name == self.pupil_name]
+        if len(pupils) == 0:
+            raise GraphingError("Mokinys nurodytų vardu neegzistuoja?")
+        if len(pupils) > 1:
+            raise GraphingError("Yra 2 ar daugiau mokinių tokiu pat vardu!")
+        return pupils[0]
+
     def _load(self) -> None:
-        name = self.pupils[self.pupil_idx].name
+        name = self.pupil_name
         if self.app.settings.flip_names:
-            name = self.pupils[self.pupil_idx].sane_name
+            name = self.pupil.sane_name
 
         self._title = f'Mokinys: {name}\nDalykų vidurkiai\n{self.period}'
         for i, summary in enumerate(self.summaries):
             logger.info(f"Nagrinėjamas laikotarpis: {summary.full_representable_name}")
 
-            for student in summary.pupils:
-                if student.name != self.pupils[self.pupil_idx].name:
+            for pupil in summary.pupils:
+                if pupil.name != self.pupil_name:
                     continue
 
-                for subject in student.sorted_subjects:
+                for subject in pupil.sorted_subjects:
                     if not subject.is_ignored:
                         self._get_subject_object(subject.name)[i] = subject.mark.clean
 
