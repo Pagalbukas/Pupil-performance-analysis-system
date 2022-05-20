@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import List, Optional, TypedDict, Union
+import logging
+
+from typing import List, Optional, Union
 
 from files import get_ignored_item_filters
 
 IGNORED_ITEM_FILTERS = get_ignored_item_filters()
+
+logger = logging.getLogger("analizatorius")
 
 class Attendance:
 
@@ -176,7 +180,7 @@ class UnifiedSubject:
                 return SubjectNames.TECHNOLOGIES
 
             # Just notify for debug reasons
-            print(f"Dalykas '{genericized_name}' yra susijęs su Daile arba Technologijomis")
+            logger.debug(f"Dalykas '{genericized_name}' yra susijęs su Daile arba Technologijomis")
 
         # Usually hits technologies for girls
         if "tekstilė" in low_generic or "apranga" in low_generic:
