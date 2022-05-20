@@ -191,7 +191,7 @@ class MatplotlibWindow(QMainWindow):
         x_count, y_count = (len(x_values), len(y_values))
 
         # Create a plot and a figure
-        self.ax = self.canvas.figure.subplots()
+        ax = self.canvas.figure.subplots()
 
         # Set up custom toolbar
         self._setup_figure(self.canvas.figure)
@@ -201,7 +201,7 @@ class MatplotlibWindow(QMainWindow):
         if not self.app.settings.styled_colouring:
             c_normalised = colors.Normalize(vmin=0, vmax=y_count - 1)
             scalar_map = mplcm.ScalarMappable(norm=c_normalised, cmap=cm)
-            self.ax.set_prop_cycle(color=[scalar_map.to_rgba(i) for i in range(y_count)])
+            ax.set_prop_cycle(color=[scalar_map.to_rgba(i) for i in range(y_count)])
 
         # Line object: [array of annotations]
         # Used for removing annotations when hiding lines
@@ -214,7 +214,7 @@ class MatplotlibWindow(QMainWindow):
         # Graph actual data
         for i, val in enumerate(y_values):
             # Draw a line of student averages
-            line = self.ax.plot(x_values, val.values, marker='o', label=val.label)[0]
+            line = ax.plot(x_values, val.values, marker='o', label=val.label)[0]
 
             if self.app.settings.styled_colouring:
                 # Adapted from https://stackoverflow.com/a/44937195
@@ -227,7 +227,7 @@ class MatplotlibWindow(QMainWindow):
                 if digit is None:
                     continue
 
-                annotation = self.ax.annotate(
+                annotation = ax.annotate(
                     str(digit).replace('.', ','),
                     xy=(x_values[j], digit),
                     color='white' if self.app.settings.outlined_values else 'black',
@@ -244,12 +244,12 @@ class MatplotlibWindow(QMainWindow):
             lines.append(line)
 
         # Set labels of the axles using the graph
-        graph.set_labels(self.ax)
+        graph.set_labels(ax)
 
         # Adjusts the plot size
         if self.app.settings.corner_legend:
-            box = self.ax.get_position()
-            self.ax.set_position([box.x0, box.y0, box.width * 0.95, box.height])
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width * 0.95, box.height])
 
         # Remove markers from the legend
         # Adapted from https://stackoverflow.com/a/48391281
@@ -259,13 +259,13 @@ class MatplotlibWindow(QMainWindow):
 
         # Moves the legend outside of the plot
         if self.app.settings.corner_legend:
-            leg = self.ax.legend(
+            leg = ax.legend(
                 handler_map={plt.Line2D: HandlerLine2D(update_func=update_prop)},
                 loc='center left',
                 bbox_to_anchor=(1, 0.5)
             )
         else:
-            leg = self.ax.legend(handler_map={plt.Line2D: HandlerLine2D(update_func=update_prop)})
+            leg = ax.legend(handler_map={plt.Line2D: HandlerLine2D(update_func=update_prop)})
 
         # Map legend lines to original lines
         lined = {}
@@ -320,7 +320,7 @@ class MatplotlibWindow(QMainWindow):
         setattr(self.canvas.toolbar, "update_line_visibility", update_line_visibility)
 
         # Create a grid of values
-        self.ax.grid(True)
+        ax.grid(True)
 
         # Set window and plot name
         self.canvas.figure.suptitle(graph.title, fontsize=16)
