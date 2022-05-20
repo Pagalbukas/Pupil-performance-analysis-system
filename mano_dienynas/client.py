@@ -9,8 +9,8 @@ from lxml.etree import _ElementTree, ElementBase # type: ignore
 from io import StringIO
 from requests.models import Response # type: ignore
 from typing import Dict, List, Optional, Tuple, Union
-from errors import ClientRequestError
 
+from errors import ClientError, ClientRequestError
 from files import get_temp_dir
 
 PARSER = etree.HTMLParser()
@@ -44,7 +44,7 @@ class UserRole:
             return
         r = self._client.request("GET", self._client.BASE_URL + self.url)
         if r.status_code != 200:
-            raise RuntimeError("Keičiant paskyros tipą įvyko nenumatyta klaida!")
+            raise ClientError("Keičiant paskyros tipą įvyko nenumatyta klaida!")
         for role in self._client._cached_roles:
             role.is_active = role.url == self.url
 
@@ -229,7 +229,7 @@ class Client:
         if class_id is not None:
             date_quick_select_elems: List[ElementBase] = form.xpath(".//a[@class='termDateSetter whiteButton']")
             if len(date_quick_select_elems) % 2 != 0:
-                raise RuntimeError("Neįmanoma automatiškai nustatyti trimestrų/pusmečių laikotarpių!")
+                raise ClientError("Neįmanoma automatiškai nustatyti trimestrų/pusmečių laikotarpių!")
 
             half = len(date_quick_select_elems) // 2
             dates = []
