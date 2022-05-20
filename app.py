@@ -22,7 +22,7 @@ from typing import List, Optional, Tuple
 from errors import ParsingError
 from files import get_data_dir, get_home_dir, get_log_file, open_path
 from graphing import (
-    PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
+    MatplotlibWindow, PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
     UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph
 )
 from mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class # type: ignore
@@ -788,6 +788,7 @@ class App(QWidget):
         self.select_user_role_widget = SelectUserRoleWidget(self)
         self.select_class_widget = SelectClassWidget(self)
         self.settings_widget = SettingsWidget(self)
+        self.matplotlib_window = MatplotlibWindow(self)
 
         # Add said widgets to the StackedWidget
         self.stack.addWidget(self.main_widget)

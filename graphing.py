@@ -10,6 +10,8 @@ import matplotlib # type: ignore
 # Tell matplotlib to use QtAgg explicitly
 matplotlib.use('QtAgg')
 
+from PySide6.QtWidgets import QMainWindow, QVBoxLayout
+from PySide6.QtCore import Qt
 from random import choice, shuffle
 from types import MethodType
 from typing import (
@@ -25,6 +27,7 @@ import matplotlib.pyplot as plt  # type: ignore # noqa: E402
 # For tweaking the default UI
 from matplotlib.backend_bases import PickEvent, NavigationToolbar2  # type: ignore # noqa: E402
 from matplotlib.backends.backend_qt import NavigationToolbar2QT  # type: ignore # noqa: E402
+from matplotlib.backends.backend_qtagg import FigureCanvas # type: ignore # noqa: E402
 # The modules exist, but for some reason, they are not picked up by Pylance
 from matplotlib.backends.qt_compat import (  # type: ignore # noqa: E402
     QtWidgets, _getSaveFileName
@@ -60,6 +63,7 @@ def save_figure(self, *args):
         Return a string, which includes extension, suitable for use as
         a default filename.
         """
+        # TODO: fix using self.canvas.parent()
         basename = (self.canvas.manager.get_window_title() if self.canvas.manager is not None else '')
         return (basename or 'image').replace(' ', '_') + f'_{int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())}'
 
@@ -106,29 +110,45 @@ class GraphValue:
     def __repr__(self) -> str:
         return f'<GraphValue label=\'{self.label}\' values={self.values}>'
 
-class BaseGraph:
+class MatplotlibWindow(QMainWindow):
 
     LINE_STYLES = ['-', '--', '-.', ':']
     STYLE_COUNT = len(LINE_STYLES)
 
     def __init__(self, app: App) -> None:
+        super().__init__(app)
         self.app = app
-        self._title: Optional[str] = None
 
-    @property
-    def title(self) -> str:
-        return self._title or "Grafikas"
+        self.canvas = FigureCanvas(Figure(figsize=(1, 1)))
+        self.toolbar = NavigationToolbar2QT(self.canvas, self)
 
-    @property
-    def window_title(self) -> str:
-        return self.title.replace("\n", " ")
+        #layout = QVBoxLayout()
+        #layout.addWidget(self.toolbar)
+        #layout.addWidget(self.canvas)
+        #self.setLayout(layout)
 
-    def set_labels(self, ax: Axes) -> None:
-        ax.set_ylabel('Vidurkis')
-        ax.set_xlabel('Laikotarpis')
+        self.addToolBar(self.toolbar)
+        self.setCentralWidget(self.canvas)
 
-    def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
-        raise NotImplementedError
+        cs = self.canvas.sizeHint()
+        cs_height = cs.height()
+        height = cs_height + self.toolbar.sizeHint().height()
+        self.resize(cs.width(), height)
+
+        self.setMinimumWidth(540)
+        self.setMinimumHeight(480)
+    
+    def set_window_flags(self) -> None:
+        # Open maximized
+        self.setWindowState(Qt.WindowMaximized)
+
+        # Set modality to disallow access to main window while this
+        # is shown
+        self.setWindowModality(Qt.WindowModal)  
+
+    def clear_figure(self) -> None:
+        """Clears the figure of any subplots and values."""
+        self.canvas.figure.clear()
 
     def _setup_figure(self, figure: Figure) -> Figure:
         """Sets up a custom matplotlib figure, the Qt toolbar to be more precise."""
@@ -161,29 +181,27 @@ class BaseGraph:
                 action.setText(name)
                 action.setToolTip(tooltip)
                 action.setVisible(show)            
-        
         return figure
 
-    def display(
-        self
-    ) -> None:
-        """Instructs matplotlib to display a graph."""
+    def load_from_graph(self, graph: BaseGraph) -> None:
+        self.clear_figure()
 
         # Store data into local variables for mutation
-        x_values, y_values = self.acquire_axes()
+        x_values, y_values = graph.acquire_axes()
         x_count, y_count = (len(x_values), len(y_values))
 
         # Create a plot and a figure
-        fig, ax = plt.subplots()
+        self.ax = self.canvas.figure.subplots()
 
-        self._setup_figure(fig)
+        # Set up custom toolbar
+        self._setup_figure(self.canvas.figure)
 
         # Set unique colors for lines in a rainbow fashion
         cm = plt.get_cmap('gist_rainbow')
         if not self.app.settings.styled_colouring:
             c_normalised = colors.Normalize(vmin=0, vmax=y_count - 1)
             scalar_map = mplcm.ScalarMappable(norm=c_normalised, cmap=cm)
-            ax.set_prop_cycle(color=[scalar_map.to_rgba(i) for i in range(y_count)])
+            self.ax.set_prop_cycle(color=[scalar_map.to_rgba(i) for i in range(y_count)])
 
         # Line object: [array of annotations]
         # Used for removing annotations when hiding lines
@@ -196,7 +214,7 @@ class BaseGraph:
         # Graph actual data
         for i, val in enumerate(y_values):
             # Draw a line of student averages
-            line = ax.plot(x_values, val.values, marker='o', label=val.label)[0]
+            line = self.ax.plot(x_values, val.values, marker='o', label=val.label)[0]
 
             if self.app.settings.styled_colouring:
                 # Adapted from https://stackoverflow.com/a/44937195
@@ -209,7 +227,7 @@ class BaseGraph:
                 if digit is None:
                     continue
 
-                annotation = ax.annotate(
+                annotation = self.ax.annotate(
                     str(digit).replace('.', ','),
                     xy=(x_values[j], digit),
                     color='white' if self.app.settings.outlined_values else 'black',
@@ -225,13 +243,13 @@ class BaseGraph:
             line_bound_annotations[line] = annotations
             lines.append(line)
 
-        # Set labels of the axles
-        self.set_labels(ax)
+        # Set labels of the axles using the graph
+        graph.set_labels(self.ax)
 
         # Adjusts the plot size
         if self.app.settings.corner_legend:
-            box = ax.get_position()
-            ax.set_position([box.x0, box.y0, box.width * 0.95, box.height])
+            box = self.ax.get_position()
+            self.ax.set_position([box.x0, box.y0, box.width * 0.95, box.height])
 
         # Remove markers from the legend
         # Adapted from https://stackoverflow.com/a/48391281
@@ -241,13 +259,13 @@ class BaseGraph:
 
         # Moves the legend outside of the plot
         if self.app.settings.corner_legend:
-            leg = plt.legend(
+            leg = self.ax.legend(
                 handler_map={plt.Line2D: HandlerLine2D(update_func=update_prop)},
                 loc='center left',
                 bbox_to_anchor=(1, 0.5)
             )
         else:
-            leg = plt.legend(handler_map={plt.Line2D: HandlerLine2D(update_func=update_prop)})
+            leg = self.ax.legend(handler_map={plt.Line2D: HandlerLine2D(update_func=update_prop)})
 
         # Map legend lines to original lines
         lined = {}
@@ -275,7 +293,7 @@ class BaseGraph:
             # Change the alpha on the line in the legend so we can see what lines
             # have been toggled.
             legline.set_alpha(1.0 if visible else 0.2)
-            fig.canvas.draw()
+            self.canvas.draw()
 
         def update_line_visibility():
             # Set every line annotation on the graph to be visible
@@ -293,25 +311,57 @@ class BaseGraph:
                 legline.set_alpha(1.0)
 
             # Ending draw call to update view
-            fig.canvas.draw()
+            self.canvas.draw()
 
         # Bind the pick_event event
-        fig.canvas.mpl_connect('pick_event', on_pick)
+        self.canvas.mpl_connect('pick_event', on_pick)
         
         # Add update_line_visibility method to the toolbar
-        setattr(fig.canvas.toolbar, "update_line_visibility", update_line_visibility)
+        setattr(self.canvas.toolbar, "update_line_visibility", update_line_visibility)
 
         # Create a grid of values
-        ax.grid(True)
+        self.ax.grid(True)
 
-        fig.suptitle(self.title, fontsize=16)
-        plt.gcf().canvas.set_window_title(self.window_title)
+        # Set window and plot name
+        self.canvas.figure.suptitle(graph.title, fontsize=16)
+        self.setWindowTitle(graph.window_title)
 
         # Automatically maximise the window
-        plt.get_current_fig_manager().window.showMaximized()
+        self.set_window_flags()
 
-        plt.show()
+        # Call draw method to update in case of old graphs
+        self.canvas.draw() 
 
+class BaseGraph:
+
+    LINE_STYLES = ['-', '--', '-.', ':']
+    STYLE_COUNT = len(LINE_STYLES)
+
+    def __init__(self, app: App) -> None:
+        self.app = app
+        self._title: Optional[str] = None
+
+    @property
+    def title(self) -> str:
+        return self._title or "Grafikas"
+
+    @property
+    def window_title(self) -> str:
+        return self.title.replace("\n", " ")
+
+    def set_labels(self, ax: Axes) -> None:
+        ax.set_ylabel('Vidurkis')
+        ax.set_xlabel('Laikotarpis')
+
+    def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
+        raise NotImplementedError
+
+    def display(
+        self
+    ) -> None:
+        """Instructs matplotlib to display a graph."""
+        self.app.matplotlib_window.load_from_graph(self)
+        return self.app.matplotlib_window.show()
 
 class G(BaseGraph):
 
