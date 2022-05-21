@@ -30,10 +30,10 @@ from parsing import PupilSemesterReportParser, PupilPeriodicReportParser
 from settings import Settings
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
-__VERSION__ = (1, 1, 3)
+__VERSION__ = (1, 1, 4)
 REPO_URL = "https://mokytojams.svetikas.lt/"
 
-logger = logging.getLogger("analizatorius")
+logger = logging.getLogger("analizatorius-1.1.4")
 logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter('[%(asctime)s %(name)s:%(levelname)s]: %(message)s', "%Y-%m-%d %H:%M:%S")
