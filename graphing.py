@@ -35,7 +35,6 @@ from matplotlib.backends.qt_compat import (  # type: ignore # noqa: E402
 from matplotlib.figure import Figure  # type: ignore # noqa: E402
 from matplotlib.legend_handler import HandlerLine2D  # type: ignore # noqa: E402
 from matplotlib.lines import Line2D  # type: ignore # noqa: E402
-from matplotlib.pyplot import Axes  # type: ignore # noqa: E402
 from matplotlib.text import Annotation  # type: ignore # noqa: E402
 
 from errors import GraphingError
@@ -63,9 +62,7 @@ def save_figure(self, *args):
         Return a string, which includes extension, suitable for use as
         a default filename.
         """
-        # TODO: fix using self.canvas.parent()
-        basename = (self.canvas.manager.get_window_title() if self.canvas.manager is not None else '')
-        return (basename or 'image').replace(' ', '_') + f'_{int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())}'
+        return (self.canvas.parent().windowTitle() or 'image').replace(' ', '_') + f'_{int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())}'
 
     start = os.path.join(startpath, get_default_filename() + ".pdf")
     filters = []
