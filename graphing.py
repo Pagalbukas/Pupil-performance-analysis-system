@@ -243,8 +243,10 @@ class MatplotlibWindow(QMainWindow):
             line_bound_annotations[line] = annotations
             lines.append(line)
 
-        # Set labels of the axles using the graph
-        graph.set_labels(ax)
+        # Set labels of the axles using the graph provided names
+        x_label, y_label = graph.acquire_labels()
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
 
         # Adjusts the plot size
         if self.app.settings.corner_legend:
@@ -349,12 +351,11 @@ class BaseGraph:
     def window_title(self) -> str:
         return self.title.replace("\n", " ")
 
-    def set_labels(self, ax: Axes) -> None:
-        ax.set_ylabel('Vidurkis')
-        ax.set_xlabel('Laikotarpis')
-
     def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
         raise NotImplementedError
+
+    def acquire_labels(self) -> Tuple[str, str]:
+        return 'Laikotarpis', 'Vidurkis'
 
     def display(
         self
@@ -524,9 +525,8 @@ class UnifiedClassAttendanceGraph(UnifiedClassGraph):
                 else:
                     self._get_pupil_object(pupil.name)[i] = pupil.attendance.total_missed
 
-    def set_labels(self, ax) -> None:
-        ax.set_ylabel('Praleistų pamokų kiekis')
-        ax.set_xlabel('Laikotarpis')
+    def acquire_labels(self) -> Tuple[str, str]:
+        return 'Laikotarpis', 'Praleistų pamokų kiekis'
 
 class AbstractPupilAveragesGraph(G):
     """A unified abstract class pupil averages graph."""
@@ -676,9 +676,8 @@ class PupilPeriodicAttendanceGraph(AbstractPupilAveragesGraph):
             values.append(GraphValue("Klasės vidurkis", self._compute_class_averages()))
         return values
 
-    def set_labels(self, ax) -> None:
-        ax.set_ylabel('Praleistų pamokų kiekis')
-        ax.set_xlabel('Laikotarpis')
+    def acquire_labels(self) -> Tuple[str, str]:
+        return 'Laikotarpis', 'Praleistų pamokų kiekis'
 
     def display(
         self,
