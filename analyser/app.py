@@ -7,16 +7,6 @@ import timeit
 import logging
 
 from logging.handlers import RotatingFileHandler
-from PySide6.QtWidgets import (
-    QApplication,
-    QVBoxLayout, QFormLayout,
-    QMessageBox, QFileDialog, QProgressDialog,
-    QWidget, QStackedWidget, QListWidget,
-    QLabel, QPushButton,
-    QLineEdit, QCheckBox
-)
-from PySide6.QtGui import QScreen, QIcon, QKeyEvent
-from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
 from typing import List, Optional, Tuple
 
 from analyser.errors import ParsingError
@@ -29,6 +19,7 @@ from analyser.mano_dienynas.client import Client, UnifiedAveragesReportGenerator
 from analyser.parsing import PupilSemesterReportParser, PupilPeriodicReportParser
 from analyser.settings import Settings
 from analyser.summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
+from analyser.qt_compat import QtWidgets, QtCore, QtGui, Qt
 
 __VERSION__ = (1, 1, 4)
 __VERSION_NAME = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}"
@@ -52,17 +43,17 @@ if "__compiled__" not in dir():
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-class GenerateReportWorker(QObject):
-    success = Signal(list)
-    error = Signal(str)
-    progress = Signal(tuple)
+class GenerateReportWorker(QtCore.QObject):
+    success = QtCore.Signal(list)
+    error = QtCore.Signal(str)
+    progress = QtCore.Signal(tuple)
 
     def __init__(self, app: App, class_o: Class) -> None:
         super().__init__()
         self.app = app
         self.class_o = class_o
 
-    @Slot() # type: ignore
+    @QtCore.Slot() # type: ignore
     def generate_periodic(self):
         try:
             generator = self.app.client.get_class_averages_report_options(self.class_o.id)
@@ -77,7 +68,7 @@ class GenerateReportWorker(QObject):
             return self.error.emit(str(e))
         self.success.emit(files)
 
-    @Slot() # type: ignore
+    @QtCore.Slot() # type: ignore
     def generate_monthly(self):
         try:
             generator = self.app.client.get_class_averages_report_options(self.class_o.id)
@@ -92,16 +83,16 @@ class GenerateReportWorker(QObject):
             return self.error.emit(str(e))
         self.success.emit(files)
 
-class ChangeRoleWorker(QObject):
-    success = Signal()
-    error = Signal(str)
+class ChangeRoleWorker(QtCore.QObject):
+    success = QtCore.Signal()
+    error = QtCore.Signal(str)
 
     def __init__(self, app: App, role_index: int) -> None:
         super().__init__()
         self.app = app
         self.index = role_index
 
-    @Slot() # type: ignore
+    @QtCore.Slot() # type: ignore
     def change_role(self):
         try:
             self.app.client.get_filtered_user_roles()[self.index].change_role()
@@ -110,9 +101,9 @@ class ChangeRoleWorker(QObject):
             return self.error.emit(str(e))
         self.success.emit()
 
-class LoginTaskWorker(QObject):
-    success = Signal(bool)
-    error = Signal(str)
+class LoginTaskWorker(QtCore.QObject):
+    success = QtCore.Signal(bool)
+    error = QtCore.Signal(str)
 
     def __init__(self, app: App, username: str, password: str) -> None:
         super().__init__()
@@ -120,7 +111,7 @@ class LoginTaskWorker(QObject):
         self.username = username
         self.password = password
 
-    @Slot() # type: ignore
+    @QtCore.Slot() # type: ignore
     def login(self):
         # Should never be called
         if self.app.client.is_logged_in:
@@ -164,19 +155,20 @@ class LoginTaskWorker(QObject):
             logger.info(f"Paskyros tipas pasirinktas automatiškai į '{roles[0].title}'")
         self.success.emit(len(roles) == 1)
 
-class MainWidget(QWidget):
+
+class MainWidget(QtWidgets.QWidget):
 
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
 
-        layout = QVBoxLayout()
-        agg_sem_button = QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
-        agg_mon_button = QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
-        att_mon_button = QPushButton('Bendra klasės lankomumo ataskaita pagal laikotarpį')
-        pup_mon_button = QPushButton('Individualizuota mokinio vidurkių ataskaita pagal laikotarpį')
-        settings_button = QPushButton('Nustatymai')
-        notice_label = QLabel()
+        layout = QtWidgets.QVBoxLayout()
+        agg_sem_button = QtWidgets.QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
+        agg_mon_button = QtWidgets.QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
+        att_mon_button = QtWidgets.QPushButton('Bendra klasės lankomumo ataskaita pagal laikotarpį')
+        pup_mon_button = QtWidgets.QPushButton('Individualizuota mokinio vidurkių ataskaita pagal laikotarpį')
+        settings_button = QtWidgets.QPushButton('Nustatymai')
+        notice_label = QtWidgets.QLabel()
 
         agg_sem_button.clicked.connect(self.app.view_aggregated_semester_graph)
         agg_mon_button.clicked.connect(self.app.view_aggregated_monthly_selector)
@@ -205,22 +197,23 @@ class MainWidget(QWidget):
         """Reacts to settings button click."""
         self.app.view_settings()
 
-class SelectGraphWidget(QWidget):
+
+class SelectGraphWidget(QtWidgets.QWidget):
 
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
 
-        layout = QVBoxLayout()
-        self.label = QLabel((
+        layout = QtWidgets.QVBoxLayout()
+        self.label = QtWidgets.QLabel((
             "Pasirinkite, kokiu būdu norite pateikti nagrinėjamus duomenis.\n\n"
             "Nagrinėjamus duomenis galite pateikti:\n"
             "- pasirenkant vidurkių ataskaitų failus rankiniu būdu;\n"
             "- leidžiant tai automatiškai padaryti programai, kuri surinks reikiamas ataskaitas iš 'Mano Dienynas' sistemos."
         ))
-        manual_button = QPushButton('Rankiniu būdu')
-        auto_button = QPushButton('Automatiškai iš \'Mano Dienynas\' sistemos')
-        back_button = QPushButton('Grįžti į pradžią')
+        manual_button = QtWidgets.QPushButton('Rankiniu būdu')
+        auto_button = QtWidgets.QPushButton('Automatiškai iš \'Mano Dienynas\' sistemos')
+        back_button = QtWidgets.QPushButton('Grįžti į pradžią')
 
         def auto():
             if self.app.client.is_logged_in:
@@ -242,7 +235,8 @@ class SelectGraphWidget(QWidget):
         layout.addWidget(back_button)
         self.setLayout(layout)
 
-class PupilSelectionWidget(QWidget):
+
+class PupilSelectionWidget(QtWidgets.QWidget):
 
     def __init__(self, app: App) -> None:
         super().__init__()
@@ -250,13 +244,13 @@ class PupilSelectionWidget(QWidget):
         self.summaries: List[ClassPeriodReportSummary] = []
         self.selected_index: Optional[int] = None
 
-        layout = QVBoxLayout()
-        label = QLabel("Pasirinkite, kurį mokinį iš sąrašo norite nagrinėti.")
-        self.name_list = QListWidget()
-        self.subject_button = QPushButton('Dalykų vidurkiai')
-        self.attendance_button = QPushButton('Lankomumas')
-        self.aggregated_button = QPushButton('Bendras vidurkis')
-        back_button = QPushButton('Grįžti į pradžią')
+        layout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel("Pasirinkite, kurį mokinį iš sąrašo norite nagrinėti.")
+        self.name_list = QtWidgets.QListWidget()
+        self.subject_button = QtWidgets.QPushButton('Dalykų vidurkiai')
+        self.attendance_button = QtWidgets.QPushButton('Lankomumas')
+        self.aggregated_button = QtWidgets.QPushButton('Bendras vidurkis')
+        back_button = QtWidgets.QPushButton('Grįžti į pradžią')
 
         def select_name() -> None:
             # Not best practise, but bash me all you want
@@ -333,24 +327,25 @@ class PupilSelectionWidget(QWidget):
             self.name_list.insertItem(i, name)
         self.disable_buttons()
 
-class LoginWidget(QWidget):
+
+class LoginWidget(QtWidgets.QWidget):
 
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
 
-        layout = QVBoxLayout()
-        label = QLabel((
+        layout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel((
             "Prisijungkite prie 'Mano Dienynas' sistemos.\n"
             "Naudokite tokius pat duomenis, kuriuos naudotumėte prisijungdami per naršyklę."
         ))
-        self.username_field = QLineEdit()
+        self.username_field = QtWidgets.QLineEdit()
         self.username_field.setPlaceholderText("Jūsų el. paštas")
-        self.password_field = QLineEdit()
+        self.password_field = QtWidgets.QLineEdit()
         self.password_field.setPlaceholderText("Slaptažodis")
-        self.password_field.setEchoMode(QLineEdit.Password)
-        self.login_button = QPushButton('Prisijungti')
-        self.back_button = QPushButton('Grįžti į pradžią')
+        self.password_field.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.login_button = QtWidgets.QPushButton('Prisijungti')
+        self.back_button = QtWidgets.QPushButton('Grįžti į pradžią')
 
         self.login_button.clicked.connect(self.login)
         self.back_button.clicked.connect(self.app.go_to_back)
@@ -362,7 +357,7 @@ class LoginWidget(QWidget):
         layout.addWidget(self.back_button)
         self.setLayout(layout)
 
-    def keyPressEvent(self, key_event: QKeyEvent) -> None:
+    def keyPressEvent(self, key_event: QtGui.QKeyEvent) -> None:
         """Intercepts enter key event and calls login function."""
         if key_event.key() == Qt.Key_Return:
             if self.login_button.isEnabled():
@@ -426,7 +421,7 @@ class LoginWidget(QWidget):
 
         self.disable_gui()
         self.login_worker = LoginTaskWorker(self.app, username, password)
-        self.login_thread = QThread()
+        self.login_thread = QtCore.QThread()
         self.login_worker.moveToThread(self.login_thread)
 
         # Connect signals
@@ -436,18 +431,19 @@ class LoginWidget(QWidget):
 
         self.login_thread.start()
 
-class SelectUserRoleWidget(QWidget):
+
+class SelectUserRoleWidget(QtWidgets.QWidget):
 
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
         self.selected_index: Optional[int] = None
 
-        layout = QVBoxLayout()
-        label = QLabel("Pasirinkite vartotojo tipą. Jis bus naudojamas nagrinėjamai klasei pasirinkti.")
-        self.role_list = QListWidget()
-        self.select_button = QPushButton('Pasirinkti')
-        self.back_button = QPushButton('Atsijungti ir grįžti į pradžią')
+        layout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel("Pasirinkite vartotojo tipą. Jis bus naudojamas nagrinėjamai klasei pasirinkti.")
+        self.role_list = QtWidgets.QListWidget()
+        self.select_button = QtWidgets.QPushButton('Pasirinkti')
+        self.back_button = QtWidgets.QPushButton('Atsijungti ir grįžti į pradžią')
 
         self.role_list.itemSelectionChanged.connect(self.select_role)
         self.select_button.clicked.connect(self.change_role)
@@ -512,7 +508,7 @@ class SelectUserRoleWidget(QWidget):
         self.disable_gui()
         assert self.selected_index is not None
         self.worker = ChangeRoleWorker(self.app, self.selected_index)
-        self.worker_thread = QThread()
+        self.worker_thread = QtCore.QThread()
         self.worker.moveToThread(self.worker_thread)
 
         # Connect signals
@@ -523,20 +519,20 @@ class SelectUserRoleWidget(QWidget):
         self.worker_thread.start()
 
 
-class SelectClassWidget(QWidget):
+class SelectClassWidget(QtWidgets.QWidget):
 
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
         self.selected_index: Optional[int] = None
 
-        layout = QVBoxLayout()
-        label = QLabel("Pasirinkite nagrinėjamą klasę.")
-        self.class_list = QListWidget()
+        layout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel("Pasirinkite nagrinėjamą klasę.")
+        self.class_list = QtWidgets.QListWidget()
         self.classes: List[Class] = []
-        self.semester_button = QPushButton('Generuoti trimestrų/pusmečių ataskaitas')
-        self.monthly_button = QPushButton('Generuoti mėnesines ataskaitas')
-        self.back_button = QPushButton('Grįžti į pradžią')
+        self.semester_button = QtWidgets.QPushButton('Generuoti trimestrų/pusmečių ataskaitas')
+        self.monthly_button = QtWidgets.QPushButton('Generuoti mėnesines ataskaitas')
+        self.back_button = QtWidgets.QPushButton('Grįžti į pradžią')
         self.progress_dialog = None
 
         self.class_list.itemSelectionChanged.connect(self.select_class)
@@ -552,7 +548,7 @@ class SelectClassWidget(QWidget):
         self.setLayout(layout)
 
     def _create_progress_dialog(self):
-        self.progress_dialog = QProgressDialog("Generuojamos ataskaitos", None, 0, 0, self)
+        self.progress_dialog = QtWidgets.QProgressDialog("Generuojamos ataskaitos", None, 0, 0, self)
         self.progress_dialog.setWindowFlags(Qt.Window | Qt.MSWindowsFixedSizeDialogHint | Qt.CustomizeWindowHint)
         self.progress_dialog.setModal(True)
 
@@ -625,7 +621,7 @@ class SelectClassWidget(QWidget):
 
     def update_data(self) -> None:
         self.enable_gui()
-        self.classes = self.app.client.get_class_averages_report_options()
+        self.classes = self.app.client.get_class_averages_report_options() # type: ignore
         if isinstance(self.classes, UnifiedAveragesReportGenerator):
             return
         self.semester_button.setEnabled(False)
@@ -640,7 +636,7 @@ class SelectClassWidget(QWidget):
         self.disable_gui()
         assert self.selected_index is not None
         self.worker = GenerateReportWorker(self.app, self.classes[self.selected_index])
-        self.worker_thread = QThread()
+        self.worker_thread = QtCore.QThread()
         self.worker.moveToThread(self.worker_thread)
         self.worker.error.connect(self.on_error_signal) # type: ignore
         self.worker.success.connect(self.on_success_signal) # type: ignore
@@ -653,7 +649,7 @@ class SelectClassWidget(QWidget):
         self.disable_gui()
         assert self.selected_index is not None
         self.worker = GenerateReportWorker(self.app, self.classes[self.selected_index])
-        self.worker_thread = QThread()
+        self.worker_thread = QtCore.QThread()
         self.worker.moveToThread(self.worker_thread)
         self.worker.error.connect(self.on_error_signal) # type: ignore
         self.worker.success.connect(self.on_success_signal) # type: ignore
@@ -662,28 +658,28 @@ class SelectClassWidget(QWidget):
         self.worker_thread.start()
 
 
-class SettingsWidget(QWidget):
+class SettingsWidget(QtWidgets.QWidget):
 
     def __init__(self, app: App) -> None:
         super().__init__()
         self.app = app
         self.unsaved = False
 
-        layout = QVBoxLayout()
-        label = QLabel("Programos nustatymai")
-        self.save_button = QPushButton('Išsaugoti pakeitimus')
-        self.back_button = QPushButton('Grįžti į pradžią')
+        layout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel("Programos nustatymai")
+        self.save_button = QtWidgets.QPushButton('Išsaugoti pakeitimus')
+        self.back_button = QtWidgets.QPushButton('Grįžti į pradžią')
 
         self.save_button.clicked.connect(self.on_save_button_click)
         self.back_button.clicked.connect(self.on_return_button_click)
 
-        settings_layout = QFormLayout()
-        self.last_dir_label = QLabel()
-        self.debugging_checkbox = QCheckBox()
-        self.hide_names_checkbox = QCheckBox()
-        self.flip_names_checkbox = QCheckBox()
-        self.outline_values_checkbox = QCheckBox()
-        self.save_path_button = QPushButton("Atidaryti")
+        settings_layout = QtWidgets.QFormLayout()
+        self.last_dir_label = QtWidgets.QLabel()
+        self.debugging_checkbox = QtWidgets.QCheckBox()
+        self.hide_names_checkbox = QtWidgets.QCheckBox()
+        self.flip_names_checkbox = QtWidgets.QCheckBox()
+        self.outline_values_checkbox = QtWidgets.QCheckBox()
+        self.save_path_button = QtWidgets.QPushButton("Atidaryti")
 
         self.debugging_checkbox.clicked.connect(self.on_debugging_checkbox_click)
         self.hide_names_checkbox.clicked.connect(self.on_hide_names_checkbox_click)
@@ -691,12 +687,12 @@ class SettingsWidget(QWidget):
         self.outline_values_checkbox.clicked.connect(self.on_outline_values_checkbox_click)
         self.save_path_button.clicked.connect(self.on_save_path_button_click)
 
-        settings_layout.addRow(QLabel("Paskutinė rankiniu būdu analizuota vieta:"), self.last_dir_label)
-        settings_layout.addRow(QLabel("Kūrėjo režimas:"), self.debugging_checkbox)
-        settings_layout.addRow(QLabel("Demonstracinis režimas:"), self.hide_names_checkbox)
-        settings_layout.addRow(QLabel("Apversti vardus (grafikuose):"), self.flip_names_checkbox)
-        settings_layout.addRow(QLabel("Rodyti kontūrus (grafikų vertėse):"), self.outline_values_checkbox)
-        settings_layout.addRow(QLabel("Programos duomenys:"), self.save_path_button)
+        settings_layout.addRow(QtWidgets.QLabel("Paskutinė rankiniu būdu analizuota vieta:"), self.last_dir_label)
+        settings_layout.addRow(QtWidgets.QLabel("Kūrėjo režimas:"), self.debugging_checkbox)
+        settings_layout.addRow(QtWidgets.QLabel("Demonstracinis režimas:"), self.hide_names_checkbox)
+        settings_layout.addRow(QtWidgets.QLabel("Apversti vardus (grafikuose):"), self.flip_names_checkbox)
+        settings_layout.addRow(QtWidgets.QLabel("Rodyti kontūrus (grafikų vertėse):"), self.outline_values_checkbox)
+        settings_layout.addRow(QtWidgets.QLabel("Programos duomenys:"), self.save_path_button)
 
         layout.addWidget(label, alignment=Qt.AlignTop) # type: ignore
         layout.addLayout(settings_layout)
@@ -742,7 +738,7 @@ class SettingsWidget(QWidget):
         self.app.settings.save()
         self.app.change_stack(App.MAIN_WIDGET)
 
-class App(QWidget):
+class App(QtWidgets.QWidget):
 
     MAIN_WIDGET = 0
     SELECT_GRAPH_DATA_WIDGET = 1
@@ -772,14 +768,16 @@ class App(QWidget):
         self.view_attendance = False
 
         self.setWindowTitle('Mokinių pasiekimų ir lankomumo stebėsenos sistema')
-        self.setWindowIcon(QIcon(os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")))
+        self.setWindowIcon(QtGui.QIcon(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")
+        ))
 
         self.left = 10
         self.top = 10
         self.w = 640
         self.h = 480
 
-        self.stack = QStackedWidget()
+        self.stack = QtWidgets.QStackedWidget()
 
         # Initialize QWidgets
         self.main_widget = MainWidget(self)
@@ -800,7 +798,7 @@ class App(QWidget):
         self.stack.addWidget(self.select_class_widget)
         self.stack.addWidget(self.settings_widget)
 
-        main_layout = QVBoxLayout()
+        main_layout = QtWidgets.QVBoxLayout()
         main_layout.addWidget(self.stack)
         self.setLayout(main_layout)
 
@@ -852,7 +850,7 @@ class App(QWidget):
 
     def initUI(self):
         self.setGeometry(self.left, self.top, self.w, self.h)
-        center = QScreen.availableGeometry(QApplication.primaryScreen()).center()
+        center = QtGui.QScreen.availableGeometry(QtWidgets.QApplication.primaryScreen()).center()
         geo = self.frameGeometry()
         geo.moveCenter(center)
         self.move(geo.topLeft())
@@ -978,7 +976,10 @@ class App(QWidget):
 
     def show_error_box(self, message: str) -> None:
         """Displays a native error dialog."""
-        QMessageBox.critical(self, "Įvyko klaida", message, QMessageBox.Ok, QMessageBox.NoButton)
+        QtWidgets.QMessageBox.critical(
+            self, "Įvyko klaida", message,
+            QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.NoButton
+        )
 
     def ask_files_dialog(self, caption: str = "Pasirinkite Excel ataskaitų failus") -> List[str]:
         """Displays a file selection dialog for picking Excel files."""
@@ -986,7 +987,7 @@ class App(QWidget):
         if directory is None or not os.path.exists(directory):
             directory = os.path.join(get_home_dir(), "Downloads")
 
-        files, _ = QFileDialog.getOpenFileNames(
+        files, _ = QtWidgets.QFileDialog.getOpenFileNames(
             self,
             caption,
             directory,

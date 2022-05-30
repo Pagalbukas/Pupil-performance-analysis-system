@@ -10,8 +10,6 @@ import matplotlib # type: ignore
 # Tell matplotlib to use QtAgg explicitly
 matplotlib.use('QtAgg')
 
-from PySide6.QtWidgets import QMainWindow, QVBoxLayout
-from PySide6.QtCore import Qt
 from random import choice, shuffle
 from types import MethodType
 from typing import (
@@ -38,6 +36,7 @@ from matplotlib.lines import Line2D  # type: ignore # noqa: E402
 from matplotlib.text import Annotation  # type: ignore # noqa: E402
 
 from analyser.errors import GraphingError
+from analyser.qt_compat import Qt
 
 if TYPE_CHECKING:
     from analyser.app import App
@@ -107,7 +106,7 @@ class GraphValue:
     def __repr__(self) -> str:
         return f'<GraphValue label=\'{self.label}\' values={self.values}>'
 
-class MatplotlibWindow(QMainWindow):
+class MatplotlibWindow(QtWidgets.QMainWindow):
 
     LINE_STYLES = ['-', '--', '-.', ':']
     STYLE_COUNT = len(LINE_STYLES)
