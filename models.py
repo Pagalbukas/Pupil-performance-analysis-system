@@ -118,7 +118,7 @@ class Mark:
                 return float(new_mark)
             elif new_mark.replace('.', '', 1).isdigit():
                 return float(new_mark)
-        raise ValueError(f"Could not convert '{self.raw_value}' to a clean mark")
+        raise ValueError(f"Nepavyko paversti '{self.raw_value}' įvertinimo į programai suprantamą įvertinimą!")
 
 class UnifiedSubject:
 
