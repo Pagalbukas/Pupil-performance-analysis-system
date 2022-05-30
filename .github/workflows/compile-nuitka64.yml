@@ -1,4 +1,4 @@
-name: Compile with Nuitka
+name: Compile with Nuitka 64-bit
 on: workflow_dispatch
 
 jobs:
@@ -29,14 +29,14 @@ jobs:
           --windows-icon-from-ico=icon.ico
           --windows-disable-console
           --standalone
-          main.py
+          analyser\main.py
       - name: Copy data files
         run: |
-          xcopy data main.dist\data /E /H /I /Y
-          xcopy icon.png main.dist\icon.png* /Y
+          xcopy analyser\data main.dist\data /E /H /I /Y
+          xcopy analyser\icon.png main.dist\icon.png* /Y
       - name: Create a NSIS script
         run: |
-          python generate-nsi.py main.dist Install-Analizatorius-Nuitka.exe
+          python generate-nsis.py main.dist Install-Analizatorius-Nuitka64.exe
       - name: Create an installer
         uses: joncloud/makensis-action@v3.6
         with:
@@ -46,4 +46,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
             name: Mokinių pasiekimų ir lankomumo stebėsenos sistema
-            path: Install-Analizatorius-Nuitka.exe
+            path: Install-Analizatorius-Nuitka64.exe

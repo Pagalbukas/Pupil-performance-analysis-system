@@ -4,7 +4,7 @@ import os
 from itertools import cycle
 from typing import TYPE_CHECKING, List, Optional
 
-from files import get_data_dir
+from analyser.files import get_data_dir
 
 class Settings:
 

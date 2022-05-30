@@ -37,12 +37,12 @@ from matplotlib.legend_handler import HandlerLine2D  # type: ignore # noqa: E402
 from matplotlib.lines import Line2D  # type: ignore # noqa: E402
 from matplotlib.text import Annotation  # type: ignore # noqa: E402
 
-from errors import GraphingError
+from analyser.errors import GraphingError
 
 if TYPE_CHECKING:
-    from app import App
-    from models import UnifiedPupil
-    from summaries import ClassPeriodReportSummary, ClassSemesterReportSummary
+    from analyser.app import App
+    from analyser.models import UnifiedPupil
+    from analyser.summaries import ClassPeriodReportSummary, ClassSemesterReportSummary
 
 logger = logging.getLogger("analizatorius")
 

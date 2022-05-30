@@ -1,8 +1,9 @@
 import sys
 
 from PySide6.QtWidgets import QApplication
-from app import App
-from settings import Settings
+
+from analyser.app import App
+from analyser.settings import Settings
 
 if __name__ == "__main__":
     settings = Settings()

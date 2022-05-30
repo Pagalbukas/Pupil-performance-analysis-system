@@ -2,7 +2,7 @@ import datetime
 
 from typing import List, Tuple
 
-from models import UnifiedPupil
+from analyser.models import UnifiedPupil
 
 ROMAN_VALUE_BINDINGS = {
     "I": 9,

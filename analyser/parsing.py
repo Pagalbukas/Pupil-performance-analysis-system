@@ -2,10 +2,10 @@ import datetime
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-from errors import InconclusiveResourceError, InvalidResourceTypeError
-from reading import SpreadsheetReader
-from models import Attendance, Mark, UnifiedPupil, UnifiedSubject
-from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
+from analyser.errors import InconclusiveResourceError, InvalidResourceTypeError
+from analyser.reading import SpreadsheetReader
+from analyser.models import Attendance, Mark, UnifiedPupil, UnifiedSubject
+from analyser.summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
 class BaseParser:
 

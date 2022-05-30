@@ -19,16 +19,16 @@ from PySide6.QtGui import QScreen, QIcon, QKeyEvent
 from PySide6.QtCore import QThread, QObject, Signal, Slot, Qt
 from typing import List, Optional, Tuple
 
-from errors import ParsingError
-from files import get_data_dir, get_home_dir, get_log_file, open_path
-from graphing import (
+from analyser.errors import ParsingError
+from analyser.files import get_data_dir, get_home_dir, get_log_file, open_path
+from analyser.graphing import (
     MatplotlibWindow, PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
     UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph
 )
-from mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class # type: ignore
-from parsing import PupilSemesterReportParser, PupilPeriodicReportParser
-from settings import Settings
-from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
+from analyser.mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class # type: ignore
+from analyser.parsing import PupilSemesterReportParser, PupilPeriodicReportParser
+from analyser.settings import Settings
+from analyser.summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
 __VERSION__ = (1, 1, 4)
 __VERSION_NAME = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}"
@@ -772,7 +772,7 @@ class App(QWidget):
         self.view_attendance = False
 
         self.setWindowTitle('Mokinių pasiekimų ir lankomumo stebėsenos sistema')
-        self.setWindowIcon(QIcon('icon.png'))
+        self.setWindowIcon(QIcon(os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")))
 
         self.left = 10
         self.top = 10

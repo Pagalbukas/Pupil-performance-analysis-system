@@ -4,7 +4,7 @@ import logging
 
 from typing import List, Optional, Union
 
-from files import get_ignored_item_filters
+from analyser.files import get_ignored_item_filters
 
 IGNORED_ITEM_FILTERS = get_ignored_item_filters()
 
@@ -108,10 +108,18 @@ class Mark:
             return False
         if self.raw_value == "atl":
             return None
+        if self.raw_value.endswith("val.") or self.raw_value.endswith("val"):
+            return None
 
         if isinstance(self.raw_value, str):
             new_mark = self.raw_value.replace("IN", "")
             new_mark = new_mark.replace("PR", "")
+            if new_mark == "įsk":
+                return True
+            if new_mark == "nsk":
+                return False
+            if new_mark == "atl":
+                return None
             if new_mark == "0":
                 return None
             if new_mark.isdecimal():

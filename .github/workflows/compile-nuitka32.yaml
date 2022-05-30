@@ -1,4 +1,4 @@
-name: Compile with Nuitka for 32-bit
+name: Compile with Nuitka 32-bit (unsupported yet)
 on: workflow_dispatch
 
 jobs:
@@ -30,14 +30,14 @@ jobs:
           --windows-icon-from-ico=icon.ico
           --windows-disable-console
           --standalone
-          main.py
+          analyser\main.py
       - name: Copy data files
         run: |
-          xcopy data main.dist\data /E /H /I /Y
-          xcopy icon.png main.dist\icon.png* /Y
+          xcopy analyser\data main.dist\data /E /H /I /Y
+          xcopy analyser\icon.png main.dist\icon.png* /Y
       - name: Create a NSIS script
         run: |
-          python generate-nsi.py main.dist Install-Analizatorius-Nuitka32.exe
+          python generate-nsis.py main.dist Install-Analizatorius-Nuitka32.exe
       - name: Create an installer
         uses: joncloud/makensis-action@v3.6
         with:

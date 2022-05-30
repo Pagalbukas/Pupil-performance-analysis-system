@@ -10,8 +10,8 @@ from io import StringIO
 from requests.models import Response # type: ignore
 from typing import Dict, List, Optional, Tuple, Union
 
-from errors import ClientError, ClientRequestError
-from files import get_temp_dir
+from analyser.errors import ClientError, ClientRequestError
+from analyser.files import get_temp_dir
 
 PARSER = etree.HTMLParser()
 
