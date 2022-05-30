@@ -1,4 +1,4 @@
-name: Compile with Nuitka 32-bit (unsupported yet)
+name: Compile with Nuitka 32-bit (lgeacy experimental, not recommended)
 on: workflow_dispatch
 
 jobs:
@@ -13,18 +13,18 @@ jobs:
           architecture: 'x86'
       - name: Install dependencies
         run: |
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements32.txt
           python -m pip install -U nuitka
       - name: Compile the program
         run: >
           python
           -m nuitka
           --assume-yes-for-downloads
-          --enable-plugin=pyside6
+          --enable-plugin=pyside2
           --include-qt-plugins=sensible,styles
           --enable-plugin=numpy
           --noinclude-scipy
-          --nofollow-import-to=PySide6.QtNetwork
+          --nofollow-import-to=PySide2.QtNetwork
           --include-module=matplotlib.backends.backend_pdf
           --include-module=matplotlib.backends.backend_qtagg
           --windows-icon-from-ico=icon.ico
