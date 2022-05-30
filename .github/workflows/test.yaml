@@ -25,6 +25,5 @@ jobs:
         pip install pytest
     - name: Test with pytest
       run: |
-        echo %CD%
-        set PYTHONPATH=%CD%
+        $env:PYTHONPATH = (Resolve-Path .\).Path
         pytest
