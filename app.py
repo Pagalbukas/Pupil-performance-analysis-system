@@ -31,12 +31,13 @@ from settings import Settings
 from summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 
 __VERSION__ = (1, 1, 4)
+__VERSION_NAME = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}"
 REPO_URL = "https://mokytojams.svetikas.lt/"
 
-logger = logging.getLogger("analizatorius-1.1.4")
+logger = logging.getLogger("analizatorius")
 logger.setLevel(logging.INFO)
 
-formatter = logging.Formatter('[%(asctime)s %(name)s:%(levelname)s]: %(message)s', "%Y-%m-%d %H:%M:%S")
+formatter = logging.Formatter(f'[%(asctime)s %(name)s-{__VERSION_NAME}:%(levelname)s]: %(message)s', "%Y-%m-%d %H:%M:%S")
 
 fh = RotatingFileHandler(get_log_file(), encoding="utf-8", maxBytes=1024 * 512, backupCount=10)
 fh.setFormatter(formatter)
