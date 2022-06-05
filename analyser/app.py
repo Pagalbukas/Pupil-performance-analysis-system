@@ -751,7 +751,10 @@ class App(QtWidgets.QWidget):
     def __init__(self, settings: Settings):
         super().__init__()
         logger.info("App instance initialised")
-        logger.info(f'Running on {platform.system()} v{platform.version()} [{platform.machine()}]')
+        if platform.system() == "Linux":
+            logger.info(f'Running on Linux {platform.release()} [{platform.machine()}]')
+        else:
+            logger.info(f'Running on {platform.system()} v{platform.version()} [{platform.machine()}]')
 
         self.settings = settings
         self.debug = settings.debugging
