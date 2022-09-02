@@ -16,7 +16,7 @@ else:
 
 TEMP_PATH = os.path.join(DATA_PATH, "temp")
 
-IGNORED_ITEMS_SOURCE_PATH = os.path.join(os.curdir, "data", "ignoruoti_dalykai.txt")
+IGNORED_ITEMS_SOURCE_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'ignoruoti_dalykai.txt')
 IGNORED_ITEMS_TARGET_PATH = os.path.join(DATA_PATH, "ignoruoti_dalykai.txt")
 
 def get_data_dir() -> str:
