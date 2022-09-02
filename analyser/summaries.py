@@ -103,9 +103,9 @@ class ClassSemesterReportSummary(BaseClassReportSummary):
     def period_name(self) -> str:
         """Returns period name based on the grade."""
         name = self.type
-        if self.grade_name_as_int < 11:
-            return name + " trimestras" # TODO: not future proof, investigate later
-        return name
+        if name.endswith("pusmetis"):
+            return name
+        return name + " trimestras"
 
     @property
     def representable_name(self) -> str:
