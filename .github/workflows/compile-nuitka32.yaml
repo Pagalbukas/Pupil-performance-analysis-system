@@ -1,4 +1,4 @@
-name: Compile with Nuitka 32-bit (lgeacy experimental, not recommended)
+name: Compile with Nuitka 32-bit (legacy experimental, not recommended)
 on: workflow_dispatch
 
 jobs:
