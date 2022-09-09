@@ -64,6 +64,14 @@ class NSIScript:
             '!define MUI_FINISHPAGE_TITLE_3LINES\n'
             '!insertmacro MUI_PAGE_WELCOME\n'
 
+            'Page Custom PrompUninstallPage\n'
+            'Function PrompUninstallPage\n'
+            'IfFileExists "$INSTDIR\\uninstall.exe" 0 +4\n'
+            'MessageBox MB_OK "Prieš diegiant programą, pašalinkite jau esamą programos versiją ir paleiskite įdiegimo programą vėl."\n'
+            'ExecWait "$INSTDIR\\uninstall.exe"\n'
+            'Quit\n'
+            'FunctionEnd\n'
+
             '!ifdef LICENSE_TXT\n'
             '!insertmacro MUI_PAGE_LICENSE "${LICENSE_TXT}"\n'
             '!endif\n'
@@ -193,6 +201,7 @@ def main(args: List[str]):
 
     # set up installer file index
     script.string += (
+        '\n'
         'Section -MainProgram\n'
         '${INSTALL_TYPE}\n'
         'SetOverwrite ifnewer\n'
