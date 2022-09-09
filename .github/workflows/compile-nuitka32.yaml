@@ -15,6 +15,9 @@ jobs:
         run: |
           python -m pip install -r requirements32.txt
           python -m pip install -U nuitka
+      - name: Set PYTHONPATH
+        run: |
+          $env:PYTHONPATH = (Resolve-Path .\).Path
       - name: Compile the program
         run: >
           python
