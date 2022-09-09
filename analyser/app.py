@@ -22,7 +22,7 @@ from analyser.summaries import ClassSemesterReportSummary, ClassPeriodReportSumm
 from analyser.qt_compat import QtWidgets, QtCore, QtGui, Qt
 from analyser.widgets.settings import SettingsWidget
 
-__VERSION__ = (1, 1, 5)
+__VERSION__ = (1, 2, 0)
 __VERSION_NAME = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}"
 REPO_URL = "https://mokytojams.svetikas.lt/"
 
