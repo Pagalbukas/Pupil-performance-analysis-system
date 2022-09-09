@@ -10,7 +10,7 @@ from logging.handlers import RotatingFileHandler
 from typing import List, Optional, Tuple
 
 from analyser.errors import ParsingError
-from analyser.files import get_data_dir, get_home_dir, get_log_file, open_path
+from analyser.files import get_home_dir, get_log_file
 from analyser.graphing import (
     MatplotlibWindow, PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
     UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph
@@ -20,6 +20,7 @@ from analyser.parsing import PupilSemesterReportParser, PupilPeriodicReportParse
 from analyser.settings import Settings
 from analyser.summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 from analyser.qt_compat import QtWidgets, QtCore, QtGui, Qt
+from analyser.widgets.settings import SettingsWidget
 
 __VERSION__ = (1, 1, 5)
 __VERSION_NAME = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}"
@@ -657,87 +658,6 @@ class SelectClassWidget(QtWidgets.QWidget):
         self.worker_thread.started.connect(self.worker.generate_monthly)
         self.worker_thread.start()
 
-
-class SettingsWidget(QtWidgets.QWidget):
-
-    def __init__(self, app: App) -> None:
-        super().__init__()
-        self.app = app
-        self.unsaved = False
-
-        layout = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QLabel("Programos nustatymai")
-        self.save_button = QtWidgets.QPushButton('Išsaugoti pakeitimus')
-        self.back_button = QtWidgets.QPushButton('Grįžti į pradžią')
-
-        self.save_button.clicked.connect(self.on_save_button_click)
-        self.back_button.clicked.connect(self.on_return_button_click)
-
-        settings_layout = QtWidgets.QFormLayout()
-        self.last_dir_label = QtWidgets.QLabel()
-        self.debugging_checkbox = QtWidgets.QCheckBox()
-        self.hide_names_checkbox = QtWidgets.QCheckBox()
-        self.flip_names_checkbox = QtWidgets.QCheckBox()
-        self.outline_values_checkbox = QtWidgets.QCheckBox()
-        self.save_path_button = QtWidgets.QPushButton("Atidaryti")
-
-        self.debugging_checkbox.clicked.connect(self.on_debugging_checkbox_click)
-        self.hide_names_checkbox.clicked.connect(self.on_hide_names_checkbox_click)
-        self.flip_names_checkbox.clicked.connect(self.on_flip_names_checkbox_click)
-        self.outline_values_checkbox.clicked.connect(self.on_outline_values_checkbox_click)
-        self.save_path_button.clicked.connect(self.on_save_path_button_click)
-
-        settings_layout.addRow(QtWidgets.QLabel("Paskutinė rankiniu būdu analizuota vieta:"), self.last_dir_label)
-        settings_layout.addRow(QtWidgets.QLabel("Kūrėjo režimas:"), self.debugging_checkbox)
-        settings_layout.addRow(QtWidgets.QLabel("Demonstracinis režimas:"), self.hide_names_checkbox)
-        settings_layout.addRow(QtWidgets.QLabel("Apversti vardus (grafikuose):"), self.flip_names_checkbox)
-        settings_layout.addRow(QtWidgets.QLabel("Rodyti kontūrus (grafikų vertėse):"), self.outline_values_checkbox)
-        settings_layout.addRow(QtWidgets.QLabel("Programos duomenys:"), self.save_path_button)
-
-        layout.addWidget(label, alignment=Qt.AlignTop) # type: ignore
-        layout.addLayout(settings_layout)
-        layout.addWidget(self.save_button)
-        layout.addWidget(self.back_button)
-        self.setLayout(layout)
-
-    def on_save_button_click(self) -> None:
-        self.save_state()
-
-    def on_return_button_click(self) -> None:
-        self.app.go_to_back()
-
-    def on_debugging_checkbox_click(self) -> None:
-        self.unsaved = True
-        self.app.settings.debugging = self.debugging_checkbox.isChecked()
-
-    def on_hide_names_checkbox_click(self) -> None:
-        self.unsaved = True
-        self.app.settings.hide_names = self.hide_names_checkbox.isChecked()
-
-    def on_flip_names_checkbox_click(self) -> None:
-        self.unsaved = True
-        self.app.settings.flip_names = self.flip_names_checkbox.isChecked()
-
-    def on_outline_values_checkbox_click(self) -> None:
-        self.unsaved = True
-        self.app.settings.outlined_values = self.outline_values_checkbox.isChecked()
-
-    def on_save_path_button_click(self) -> None:
-        open_path(get_data_dir())
-
-    def load_state(self) -> None:
-        self.last_dir_label.setText(self.app.settings.last_dir or "nėra")
-        self.debugging_checkbox.setChecked(self.app.settings.debugging)
-        self.hide_names_checkbox.setChecked(self.app.settings.hide_names)
-        self.flip_names_checkbox.setChecked(self.app.settings.flip_names)
-        self.outline_values_checkbox.setChecked(self.app.settings.outlined_values)
-
-    def save_state(self) -> None:
-        self.unsaved = False
-        self.app.settings.last_ver = list(__VERSION__)
-        self.app.settings.save()
-        self.app.change_stack(App.MAIN_WIDGET)
-
 class App(QtWidgets.QWidget):
 
     MAIN_WIDGET = 0
@@ -750,6 +670,7 @@ class App(QtWidgets.QWidget):
 
     def __init__(self, settings: Settings):
         super().__init__()
+        self.version = __VERSION__
         logger.info("App instance initialised")
         if platform.system() == "Linux":
             logger.info(f'Running on Linux {platform.release()} [{platform.machine()}]')
