@@ -16,7 +16,7 @@ jobs:
           python -m pip install nuitka==0.7.7
       - name: Compile the program
         run: >
-          $env:PYTHONPATH = (Resolve-Path .\).Path; python
+          python
           -m nuitka
           --assume-yes-for-downloads
           --enable-plugin=pyside6

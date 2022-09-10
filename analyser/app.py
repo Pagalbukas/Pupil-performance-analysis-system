@@ -10,7 +10,7 @@ from logging.handlers import RotatingFileHandler
 from typing import List, Optional, Tuple
 
 from analyser.errors import ParsingError
-from analyser.files import get_home_dir, get_log_file
+from analyser.files import EXECUTABLE_PATH, get_home_dir, get_log_file
 from analyser.graphing import (
     MatplotlibWindow, PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
     UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph
@@ -693,7 +693,7 @@ class App(QtWidgets.QWidget):
 
         self.setWindowTitle('Mokinių pasiekimų ir lankomumo stebėsenos sistema')
         self.setWindowIcon(QtGui.QIcon(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")
+            os.path.join(EXECUTABLE_PATH, 'icon.png')
         ))
 
         self.left = 10
