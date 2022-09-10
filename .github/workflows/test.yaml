@@ -23,10 +23,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest
-    - name: Set env
-      run: |
-        $env:PYTHONPATH = (Resolve-Path .\).Path 
     - name: Test with pytest
       run: |
-        $env:PYTHONPATH
+        $env:PYTHONPATH = (Resolve-Path .\).Path 
         pytest
