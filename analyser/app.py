@@ -1,4 +1,5 @@
 from __future__ import annotations
+from ctypes import Union
 
 import os
 import platform
@@ -7,20 +8,24 @@ import timeit
 import logging
 
 from logging.handlers import RotatingFileHandler
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from analyser.errors import ParsingError
 from analyser.files import EXECUTABLE_PATH, get_home_dir, get_log_file
 from analyser.graphing import (
     MatplotlibWindow, PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
-    UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph
+    UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph, UnifiedGroupGraph
 )
 from analyser.mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class # type: ignore
-from analyser.parsing import PupilSemesterReportParser, PupilPeriodicReportParser
+from analyser.parsing import GroupPeriodicReportParser, PupilSemesterReportParser, PupilPeriodicReportParser, parse_periodic_summary_files
 from analyser.settings import Settings
 from analyser.summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 from analyser.qt_compat import QtWidgets, QtCore, QtGui, Qt
+from analyser.widgets.main import MainWidget2
+from analyser.widgets.login import LoginWidget
 from analyser.widgets.settings import SettingsWidget
+from analyser.widgets.type_selector import ManualFileSelectorWidget
+from analyser.widgets.view import GroupViewTypeSelectorWidget, PeriodicViewTypeSelectorWidget, PupilSelectionWidget
 
 __VERSION__ = (1, 2, 1)
 __VERSION_NAME = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}"
@@ -101,337 +106,6 @@ class ChangeRoleWorker(QtCore.QObject):
             logger.exception(e)
             return self.error.emit(str(e))
         self.success.emit()
-
-class LoginTaskWorker(QtCore.QObject):
-    success = QtCore.Signal(bool)
-    error = QtCore.Signal(str)
-
-    def __init__(self, app: App, username: str, password: str) -> None:
-        super().__init__()
-        self.app = app
-        self.username = username
-        self.password = password
-
-    @QtCore.Slot() # type: ignore
-    def login(self):
-        # Should never be called
-        if self.app.client.is_logged_in:
-            return self.error.emit("Vartotojas jau prisijungęs, pala, ką?")
-
-        # Do the actual login request
-        try:
-            logged_in = self.app.client.login(self.username, self.password)
-        except Exception as e:
-            logger.exception(e)
-            return self.error.emit(str(e))
-
-        if not logged_in:
-            return self.error.emit("Prisijungimas nepavyko, patikrinkite, ar duomenys suvesti teisingai!")
-
-        # Save the username since login was successful
-        self.app.settings.username = self.username
-        self.app.settings.save()
-
-        # Obtain filtered roles while at it and verify that user has the rights
-        try:
-            roles = self.app.client.get_filtered_user_roles()
-        except Exception as e:
-            logger.exception(e)
-            return self.error.emit(str(e))
-
-        if len(roles) == 0:
-            self.app.client.logout()
-            return self.error.emit(
-                "Paskyra neturi reikiamų vartotojo teisių. "
-                "Kol kas palaikomos tik paskyros su 'Klasės vadovas' ir 'Sistemos administratorius' tipais."
-            )
-
-        if len(roles) == 1:
-            if not roles[0].is_active:
-                try:
-                    roles[0].change_role()
-                except Exception as e:
-                    logger.exception(e)
-                    return self.error.emit(str(e))
-            logger.info(f"Paskyros tipas pasirinktas automatiškai į '{roles[0].title}'")
-        self.success.emit(len(roles) == 1)
-
-
-class MainWidget(QtWidgets.QWidget):
-
-    def __init__(self, app: App) -> None:
-        super().__init__()
-        self.app = app
-
-        layout = QtWidgets.QVBoxLayout()
-        agg_sem_button = QtWidgets.QPushButton('Bendra klasės vidurkių ataskaita pagal trimestrus / pusmečius')
-        agg_mon_button = QtWidgets.QPushButton('Bendra klasės vidurkių ataskaita pagal laikotarpį')
-        att_mon_button = QtWidgets.QPushButton('Bendra klasės lankomumo ataskaita pagal laikotarpį')
-        pup_mon_button = QtWidgets.QPushButton('Individualizuota mokinio vidurkių ataskaita pagal laikotarpį')
-        settings_button = QtWidgets.QPushButton('Nustatymai')
-        notice_label = QtWidgets.QLabel()
-
-        agg_sem_button.clicked.connect(self.app.view_aggregated_semester_graph)
-        agg_mon_button.clicked.connect(self.app.view_aggregated_monthly_selector)
-        att_mon_button.clicked.connect(self.app.view_attendance_monthly_selector)
-        pup_mon_button.clicked.connect(self.app.view_pupil_monthly_selector)
-        settings_button.clicked.connect(self.on_settings_button_click)
-
-        major, minor, patch = __VERSION__
-
-        notice_label.setText(f"<a href=\"{REPO_URL}\">v{major}.{minor}.{patch} Dominykas Svetikas © 2022</a>")
-        notice_label.setTextFormat(Qt.RichText)
-        notice_label.setTextInteractionFlags(Qt.TextBrowserInteraction) # type: ignore
-        notice_label.setOpenExternalLinks(True)
-
-        # God forbid I have to mess with this sh*t again
-        # Took longer than aligning a div in CSS
-        layout.addWidget(agg_sem_button, alignment=Qt.AlignVCenter) # type: ignore
-        layout.addWidget(agg_mon_button, alignment=Qt.AlignVCenter) # type: ignore
-        layout.addWidget(att_mon_button, alignment=Qt.AlignVCenter) # type: ignore
-        layout.addWidget(pup_mon_button, alignment=Qt.AlignVCenter) # type: ignore
-        layout.addWidget(settings_button, alignment=Qt.AlignVCenter) # type: ignore
-        layout.addWidget(notice_label, alignment=Qt.AlignRight | Qt.AlignBottom | Qt.AlignJustify) # type: ignore
-        self.setLayout(layout)
-
-    def on_settings_button_click(self) -> None:
-        """Reacts to settings button click."""
-        self.app.view_settings()
-
-
-class SelectGraphWidget(QtWidgets.QWidget):
-
-    def __init__(self, app: App) -> None:
-        super().__init__()
-        self.app = app
-
-        layout = QtWidgets.QVBoxLayout()
-        self.label = QtWidgets.QLabel((
-            "Pasirinkite, kokiu būdu norite pateikti nagrinėjamus duomenis.\n\n"
-            "Nagrinėjamus duomenis galite pateikti:\n"
-            "- pasirenkant vidurkių ataskaitų failus rankiniu būdu;\n"
-            "- leidžiant tai automatiškai padaryti programai, kuri surinks reikiamas ataskaitas iš 'Mano Dienynas' sistemos."
-        ))
-        manual_button = QtWidgets.QPushButton('Rankiniu būdu')
-        auto_button = QtWidgets.QPushButton('Automatiškai iš \'Mano Dienynas\' sistemos')
-        back_button = QtWidgets.QPushButton('Grįžti į pradžią')
-
-        def auto():
-            if self.app.client.is_logged_in:
-                if len(self.app.client.get_filtered_user_roles()) == 1:
-                    self.app.select_class_widget.update_data()
-                    return self.app.change_stack(self.app.SELECT_CLASS_WIDGET)
-                return self.app.change_stack(self.app.SELECT_USER_ROLE_WIDGET)
-            self.app.login_widget.clear_fields()
-            self.app.login_widget.fill_fields()
-            self.app.change_stack(self.app.LOGIN_WIDGET)
-
-        manual_button.clicked.connect(self.app.determine_graph_type)
-        auto_button.clicked.connect(auto)
-        back_button.clicked.connect(self.app.go_to_back)
-
-        layout.addWidget(self.label)
-        layout.addWidget(manual_button)
-        layout.addWidget(auto_button)
-        layout.addWidget(back_button)
-        self.setLayout(layout)
-
-
-class PupilSelectionWidget(QtWidgets.QWidget):
-
-    def __init__(self, app: App) -> None:
-        super().__init__()
-        self.app = app
-        self.summaries: List[ClassPeriodReportSummary] = []
-        self.selected_index: Optional[int] = None
-
-        layout = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QLabel("Pasirinkite, kurį mokinį iš sąrašo norite nagrinėti.")
-        self.name_list = QtWidgets.QListWidget()
-        self.subject_button = QtWidgets.QPushButton('Dalykų vidurkiai')
-        self.attendance_button = QtWidgets.QPushButton('Lankomumas')
-        self.aggregated_button = QtWidgets.QPushButton('Bendras vidurkis')
-        back_button = QtWidgets.QPushButton('Grįžti į pradžią')
-
-        def select_name() -> None:
-            # Not best practise, but bash me all you want
-            indexes = self.name_list.selectedIndexes()
-            if len(indexes) == 0:
-                return
-            index = indexes[0].row() # type: ignore
-            self.subject_button.setEnabled(True)
-            self.attendance_button.setEnabled(True)
-            self.aggregated_button.setEnabled(True)
-            self.selected_index = index
-
-        # Bind the events
-        self.name_list.itemSelectionChanged.connect(select_name)
-        self.subject_button.clicked.connect(self.display_subjects_graph)
-        self.attendance_button.clicked.connect(self.display_attendance_graph)
-        self.aggregated_button.clicked.connect(self.display_aggregated_graph)
-        back_button.clicked.connect(self.app.go_to_back)
-
-        layout.addWidget(label)
-        layout.addWidget(self.name_list)
-        layout.addWidget(self.subject_button)
-        layout.addWidget(self.attendance_button)
-        layout.addWidget(self.aggregated_button)
-        layout.addWidget(back_button)
-        self.setLayout(layout)
-
-    def disable_buttons(self) -> None:
-        """Disables per-subject or aggregated graph buttons."""
-        self.subject_button.setEnabled(False)
-        self.attendance_button.setEnabled(False)
-        self.aggregated_button.setEnabled(False)
-
-    def resolve_pupil_name(self) -> str:
-        assert self.selected_index is not None
-        return self.summaries[-1].pupils[self.selected_index].name
-
-    def display_subjects_graph(self) -> None:
-        if self.selected_index is None:
-            return
-        try:
-            graph = PupilSubjectPeriodicAveragesGraph(self.app, self.summaries, self.resolve_pupil_name())
-            graph.display()
-        except Exception as e:
-            logger.exception(e)
-            return self.app.show_error_box(str(e))
-
-    def display_attendance_graph(self) -> None:
-        if self.selected_index is None:
-            return
-        try:
-            graph = PupilPeriodicAttendanceGraph(self.app, self.summaries, self.resolve_pupil_name())
-            graph.display()
-        except Exception as e:
-            logger.exception(e)
-            return self.app.show_error_box(str(e))
-
-    def display_aggregated_graph(self) -> None:
-        if self.selected_index is None:
-            return
-        try:
-            graph = PupilPeriodicAveragesGraph(self.app, self.summaries, self.resolve_pupil_name())
-            graph.display()
-        except Exception as e:
-            logger.exception(e)
-            return self.app.show_error_box(str(e))
-
-    def update_data(self, summaries: List[ClassPeriodReportSummary]) -> None:
-        """Updates widget data."""
-        self.summaries = summaries
-        self.name_list.clearSelection()
-        self.name_list.clear()
-        for i, name in enumerate([p.name for p in summaries[-1].pupils]):
-            self.name_list.insertItem(i, name)
-        self.disable_buttons()
-
-
-class LoginWidget(QtWidgets.QWidget):
-
-    def __init__(self, app: App) -> None:
-        super().__init__()
-        self.app = app
-
-        layout = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QLabel((
-            "Prisijungkite prie 'Mano Dienynas' sistemos.\n"
-            "Naudokite tokius pat duomenis, kuriuos naudotumėte prisijungdami per naršyklę."
-        ))
-        self.username_field = QtWidgets.QLineEdit()
-        self.username_field.setPlaceholderText("Jūsų el. paštas")
-        self.password_field = QtWidgets.QLineEdit()
-        self.password_field.setPlaceholderText("Slaptažodis")
-        self.password_field.setEchoMode(QtWidgets.QLineEdit.Password)
-        self.login_button = QtWidgets.QPushButton('Prisijungti')
-        self.back_button = QtWidgets.QPushButton('Grįžti į pradžią')
-
-        self.login_button.clicked.connect(self.login)
-        self.back_button.clicked.connect(self.app.go_to_back)
-
-        layout.addWidget(label)
-        layout.addWidget(self.username_field)
-        layout.addWidget(self.password_field)
-        layout.addWidget(self.login_button)
-        layout.addWidget(self.back_button)
-        self.setLayout(layout)
-
-    def keyPressEvent(self, key_event: QtGui.QKeyEvent) -> None:
-        """Intercepts enter key event and calls login function."""
-        if key_event.key() == Qt.Key_Return:
-            if self.login_button.isEnabled():
-                self.login()
-        else:
-            super().keyPressEvent(key_event)
-
-    def fill_fields(self) -> None:
-        """Fills the input fields with default and saved values."""
-        self.username_field.setText(self.app.settings.username or "")
-
-    def clear_fields(self) -> None:
-        """Clears password and username fields."""
-        self.username_field.clear()
-        self.password_field.clear()
-
-    def enable_gui(self) -> None:
-        """Enables GUI components."""
-        self.username_field.setEnabled(True)
-        self.password_field.setEnabled(True)
-        self.login_button.setEnabled(True)
-        self.back_button.setEnabled(True)
-
-    def disable_gui(self) -> None:
-        """Disables GUI components."""
-        self.username_field.setEnabled(False)
-        self.password_field.setEnabled(False)
-        self.login_button.setEnabled(False)
-        self.login_button.clearFocus()
-        self.back_button.setEnabled(False)
-
-    def propagate_error(self, error_msg: str) -> None:
-        """Display an error and re-enable the GUI."""
-        self.enable_gui()
-        self.app.show_error_box(error_msg)
-
-    def on_error_signal(self, error: str) -> None:
-        """Callback of LoginTaskWorker thread on error."""
-        self.propagate_error(error)
-        self.login_thread.quit()
-
-    def on_success_signal(self, role_selected: bool) -> None:
-        """Callback of LoginTaskWorker thread on success."""
-        self.login_thread.quit()
-        self.enable_gui()
-        if role_selected:
-            self.app.select_class_widget.update_data()
-            return self.app.change_stack(self.app.SELECT_CLASS_WIDGET)
-        self.app.select_user_role_widget.update_list()
-        self.app.change_stack(self.app.SELECT_USER_ROLE_WIDGET)
-
-    def login(self) -> None:
-        """Attempt to log into Mano Dienynas.
-
-        Starts a LoginTask worker thread."""
-        username = self.username_field.text()
-        password = self.password_field.text()
-
-        if username.strip() == "" or password.strip() == "":
-            return self.propagate_error("Įveskite prisijungimo duomenis!")
-
-        self.disable_gui()
-        self.login_worker = LoginTaskWorker(self.app, username, password)
-        self.login_thread = QtCore.QThread()
-        self.login_worker.moveToThread(self.login_thread)
-
-        # Connect signals
-        self.login_worker.error.connect(self.on_error_signal) # type: ignore
-        self.login_worker.success.connect(self.on_success_signal) # type: ignore
-        self.login_thread.started.connect(self.login_worker.login)
-
-        self.login_thread.start()
-
 
 class SelectUserRoleWidget(QtWidgets.QWidget):
 
@@ -609,15 +283,10 @@ class SelectClassWidget(QtWidgets.QWidget):
         if self.progress_dialog:
             self.progress_dialog.hide()
         self.worker_thread.quit()
-        sums = self.app.generate_periodic_summaries(file_paths)
-        sums.sort(key=lambda s: (s.term_start))
-        if self.app.view_attendance:
-            self.app.display_attendance_monthly_graph(sums)
-            return self.enable_gui()
-        if self.app.view_aggregated:
-            self.app.display_aggregated_monthly_graph(sums)
-            return self.enable_gui()
-        self.app.display_pupil_monthly_graph_selector(sums)
+        
+        summaries = parse_periodic_summary_files(file_paths)
+        summaries.sort(key=lambda s: (s.term_start))
+        self.app.open_periodic_type_selector(summaries)
         self.enable_gui()
 
     def update_data(self) -> None:
@@ -658,15 +327,22 @@ class SelectClassWidget(QtWidgets.QWidget):
         self.worker_thread.started.connect(self.worker.generate_monthly)
         self.worker_thread.start()
 
+class Dummy(QtWidgets.QWidget):
+    pass
+
 class App(QtWidgets.QWidget):
 
     MAIN_WIDGET = 0
-    SELECT_GRAPH_DATA_WIDGET = 1
+    DUMMY = 1
     SELECT_PUPIL_WIDGET = 2
     LOGIN_WIDGET = 3
     SELECT_USER_ROLE_WIDGET = 4
     SELECT_CLASS_WIDGET = 5
     SETTINGS_WIDGET = 6
+
+    MANUAL_SELECTOR = 7
+    PERIODIC_TYPE_SELECTOR = 8
+    GROUP_TYPE_SELECTOR = 9
 
     def __init__(self, settings: Settings):
         super().__init__()
@@ -688,9 +364,6 @@ class App(QtWidgets.QWidget):
                 ch.setLevel(logging.DEBUG)
             logger.debug(f"Loaded modules: {list(sys.modules.keys())}")
 
-        self.view_aggregated = False
-        self.view_attendance = False
-
         self.setWindowTitle('Mokinių pasiekimų ir lankomumo stebėsenos sistema')
         self.setWindowIcon(QtGui.QIcon(
             os.path.join(EXECUTABLE_PATH, 'icon.png')
@@ -702,25 +375,38 @@ class App(QtWidgets.QWidget):
         self.h = 480
 
         self.stack = QtWidgets.QStackedWidget()
+        
+        # Initialize core widgets
+        self.main_widget = MainWidget2(self)
+        self.settings_widget = SettingsWidget(self)
+        self.matplotlib_window = MatplotlibWindow(self)
+        
+        # Initialize file selection/generation widgets
+        self.file_selector_widget = ManualFileSelectorWidget(self)
+        
+        # Initialise selectors
+        self.periodic_view_selector_widget = PeriodicViewTypeSelectorWidget(self)
+        self.group_view_selector_widget = GroupViewTypeSelectorWidget(self)
 
         # Initialize QWidgets
-        self.main_widget = MainWidget(self)
-        self.select_graph_widget = SelectGraphWidget(self)
+        dummy = Dummy()
         self.select_pupil_widget = PupilSelectionWidget(self)
         self.login_widget = LoginWidget(self)
         self.select_user_role_widget = SelectUserRoleWidget(self)
         self.select_class_widget = SelectClassWidget(self)
-        self.settings_widget = SettingsWidget(self)
-        self.matplotlib_window = MatplotlibWindow(self)
 
         # Add said widgets to the StackedWidget
         self.stack.addWidget(self.main_widget)
-        self.stack.addWidget(self.select_graph_widget)
+        self.stack.addWidget(dummy)
         self.stack.addWidget(self.select_pupil_widget)
         self.stack.addWidget(self.login_widget)
         self.stack.addWidget(self.select_user_role_widget)
         self.stack.addWidget(self.select_class_widget)
         self.stack.addWidget(self.settings_widget)
+        
+        self.stack.addWidget(self.file_selector_widget)
+        self.stack.addWidget(self.periodic_view_selector_widget)
+        self.stack.addWidget(self.group_view_selector_widget)
 
         main_layout = QtWidgets.QVBoxLayout()
         main_layout.addWidget(self.stack)
@@ -728,49 +414,52 @@ class App(QtWidgets.QWidget):
 
         self.initUI()
 
+    def _display_graph(self, graph: UnifiedClassAveragesGraph):
+        try:
+            graph.display()
+        except Exception as e:
+            logger.exception(e)
+            return self.show_error_box(str(e))
+        
+    def display_semester_pupil_averages_graph(self, summaries):
+        self._display_graph(UnifiedClassAveragesGraph(self, summaries))
+
+    def display_period_pupil_averages_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
+        self._display_graph(UnifiedClassAveragesGraph(self, summaries))
+
+    def display_period_attendance_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
+        self._display_graph(UnifiedClassAttendanceGraph(self, summaries))
+
+    def display_group_pupil_marks_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
+        self._display_graph(UnifiedGroupGraph(self, summaries[0]))
+
     def go_to_back(self) -> None:
         """Return to the main widget."""
         self.view_aggregated = False
         self.view_attendance = False
         self.change_stack(self.MAIN_WIDGET)
+        
+    def open_periodic_type_selector(self, summaries):
+        self.periodic_view_selector_widget._update_summary_list(summaries)
+        self.change_stack(self.PERIODIC_TYPE_SELECTOR)
+
+    def open_group_type_selector(self, summaries):
+        self.group_view_selector_widget._update_summary_list(summaries)
+        self.change_stack(self.GROUP_TYPE_SELECTOR)
+        
+    def open_individual_period_pupil_graph_selector(self, summaries):
+        self.select_pupil_widget.disable_buttons()
+        self.select_pupil_widget.update_data(summaries)
+        self.change_stack(self.SELECT_PUPIL_WIDGET)
+    
+    def open_individual_group_pupil_graph_selector(self, summaries):
+        self.select_pupil_widget.disable_buttons()
+        self.select_pupil_widget.update_data(summaries)
+        self.change_stack(self.SELECT_PUPIL_WIDGET)
 
     def change_stack(self, index: int) -> None:
         """Change current stack widget."""
         self.stack.setCurrentIndex(index)
-
-    def view_settings(self) -> None:
-        """Opens the settings widget."""
-        self.settings_widget.load_state()
-        self.change_stack(self.SETTINGS_WIDGET)
-
-    def view_aggregated_monthly_selector(self):
-        self.view_aggregated = True
-        self.change_stack(self.SELECT_GRAPH_DATA_WIDGET)
-
-    def view_attendance_monthly_selector(self):
-        self.view_attendance = True
-        self.change_stack(self.SELECT_GRAPH_DATA_WIDGET)
-
-    def view_pupil_monthly_selector(self):
-        self.view_aggregated = False
-        self.change_stack(self.SELECT_GRAPH_DATA_WIDGET)
-
-    def determine_graph_type(self):
-        filenames = self.ask_files_dialog()
-        if len(filenames) == 0:
-            return
-
-        summaries = self.generate_periodic_summaries(filenames)
-        if len(summaries) == 0:
-            return self.show_error_box("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
-
-        # Sort summaries by term start, ascending (YYYY-MM-DD)
-        summaries.sort(key=lambda s: (s.term_start))
-        if self.view_attendance:
-            return self.display_attendance_monthly_graph(summaries)
-        if self.view_aggregated:
-            return self.display_aggregated_monthly_graph(summaries)
-        self.display_pupil_monthly_graph_selector(summaries)
 
     def initUI(self):
         self.setGeometry(self.left, self.top, self.w, self.h)
@@ -779,124 +468,6 @@ class App(QtWidgets.QWidget):
         geo.moveCenter(center)
         self.move(geo.topLeft())
         self.show()
-
-    def generate_semester_summaries(self, files: List[str]) -> List[ClassSemesterReportSummary]:
-        """Generates a list of semester type summaries."""
-        summaries: List[ClassSemesterReportSummary] = []
-        for filename in files:
-            start_time = timeit.default_timer()
-            base_name = os.path.basename(filename)
-
-            try:
-                parser = PupilSemesterReportParser(filename)
-                summary = parser.create_summary(fetch_subjects=True)
-                parser.close()
-            except ParsingError as e:
-                logger.error(f"{base_name}: {e}")
-                continue
-            except Exception as e:
-                logger.exception(f"{base_name}: {e}")
-                continue
-
-            if summary.type == "metinis":
-                logger.warn(f"{base_name}: metinė ataskaita yra nevertinama")
-                continue
-
-            if any(s for s in summaries if s.representable_name == summary.representable_name):
-                logger.warn(f"{base_name}: tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
-                continue
-
-            logger.debug(f"{base_name}: skaitymas užtruko {timeit.default_timer() - start_time}s")
-            summaries.append(summary)
-
-        if len(summaries) == 0:
-            logger.error("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
-        logger.debug(f"Pusmečių/trimestrų suvestinės sugeneruotos: {len(summaries)}")
-        return summaries
-
-    def generate_periodic_summaries(self, files: List[str]) -> List[ClassPeriodReportSummary]:
-        """Generates a list of periodic summaries."""
-        summaries: List[ClassPeriodReportSummary] = []
-        for filename in files:
-            start_time = timeit.default_timer()
-            base_name = os.path.basename(filename)
-
-            try:
-                parser = PupilPeriodicReportParser(filename)
-                summary = parser.create_summary(fetch_subjects=True)
-                parser.close()
-            except ParsingError as e:
-                logger.error(f"{base_name}: {e}")
-                continue
-            except Exception as e:
-                logger.exception(f"{base_name}: {e}")
-                continue
-
-            if any(s for s in summaries if s.representable_name == summary.representable_name):
-                logger.warn(f"{base_name}: tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
-                continue
-
-            if any(s.average is None for s in summary.students):
-                logger.warn(f"{base_name}: bent vieno mokinio vidurkis yra ne-egzistuojantis, neskaitoma")
-                continue
-
-            logger.debug(f"{base_name}: skaitymas užtruko {timeit.default_timer() - start_time}s")
-            summaries.append(summary)
-
-        if len(summaries) == 0:
-            logger.error("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
-        logger.debug(f"Laikotarpių suvestinės sugeneruotos: {len(summaries)}")
-        return summaries
-
-    def view_aggregated_semester_graph(self) -> None:
-        files = self.ask_files_dialog()
-        if len(files) == 0:
-            return
-
-        if self.debug:
-            for file in files:
-                logger.debug(f"File selected: {file}")
-
-        summaries = self.generate_semester_summaries(files)
-        if len(summaries) == 0:
-            return self.show_error_box("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
-
-        # Sort summaries by
-        # 1) term start (year)
-        # 2) type (semester) (I -> II -> III)
-        summaries.sort(key=lambda s: (s.term_start, s.type_as_int))
-        self.display_aggregated_semester_graph(summaries)
-
-    def display_aggregated_semester_graph(self, summaries: List[ClassSemesterReportSummary]) -> None:
-        try:
-            graph = UnifiedClassAveragesGraph(self, summaries)
-            graph.display()
-        except Exception as e:
-            logger.exception(e)
-            return self.show_error_box(str(e))
-
-    def display_aggregated_monthly_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
-        try:
-            graph = UnifiedClassAveragesGraph(self, summaries)
-            graph.display()
-        except Exception as e:
-            logger.exception(e)
-            return self.show_error_box(str(e))
-        self.go_to_back()
-
-    def display_attendance_monthly_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
-        try:
-            graph = UnifiedClassAttendanceGraph(self, summaries)
-            graph.display()
-        except Exception as e:
-            logger.exception(e)
-            return self.show_error_box(str(e))
-        self.go_to_back()
-
-    def display_pupil_monthly_graph_selector(self, summaries: List[ClassPeriodReportSummary]):
-        self.select_pupil_widget.disable_buttons()
-        self.select_pupil_widget.update_data(summaries)
-        self.change_stack(self.SELECT_PUPIL_WIDGET)
 
     def show_error_box(self, message: str) -> None:
         """Displays a native error dialog."""

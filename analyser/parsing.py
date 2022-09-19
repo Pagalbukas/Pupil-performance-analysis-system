@@ -1,11 +1,16 @@
 import datetime
+import os
+import timeit
+import logging
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-from analyser.errors import InconclusiveResourceError, InvalidResourceTypeError
+from analyser.errors import InconclusiveResourceError, InvalidResourceTypeError, ParsingError
 from analyser.reading import SpreadsheetReader
 from analyser.models import Attendance, Mark, UnifiedPupil, UnifiedSubject
 from analyser.summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
+
+logger = logging.getLogger("analizatorius")
 
 class BaseParser:
 
@@ -269,3 +274,221 @@ class PupilPeriodicReportParser(BaseParser):
             (self.term_start, self.term_end),
             self.get_pupil_data(fetch_subjects)
         )
+
+class GroupParser(BaseParser):
+
+    def get_pupil_attendance(self, pupil_row: int) -> Attendance:
+        """Returns a dict containing pupil's attendance."""
+
+        def convert_value(raw: Optional[Union[str, float, int]]) -> int:
+            """Helper function to convert cell values to integers."""
+            if raw is None:
+                return 0
+            return int(raw)
+
+        return Attendance(
+            convert_value(self.cell(self.attendance_column + 2, pupil_row)),
+            convert_value(self.cell(self.attendance_column, pupil_row)),
+            convert_value(self.cell(self.attendance_column + 1, pupil_row)),
+            convert_value(self.cell(self.attendance_column + 3, pupil_row))
+        )
+
+class GroupPeriodicReportParser(GroupParser):
+
+    def __init__(self, file_path: str) -> None:
+        super().__init__(file_path)
+        term_value = self.cell(4, 3).split(" - ") # type: ignore
+        self.term_start = datetime.datetime.strptime(term_value[0], "%Y-%m-%d")
+        self.term_start = self.term_start.replace(tzinfo=datetime.timezone.utc)
+        self.term_end = datetime.datetime.strptime(term_value[1], "%Y-%m-%d")
+        self.term_end = self.term_end.replace(tzinfo=datetime.timezone.utc)
+
+    def _find_average_column(self) -> int:
+        if self._average_col is None:
+            off_col = 4
+            while True:
+                # Row of 'Pasiekimų lygiai'
+                value = self.cell(off_col + 1, 17)
+                if value == "Vidurkis":
+                    break
+                off_col += 1
+            self._average_col = off_col + 1
+        return self._average_col
+
+    def _find_last_pupil_row(self) -> int:
+        """Returns a row of the last pupil in the spreadsheet."""
+        if self._last_pupil_row is None:
+            off_row = 17
+            while True:
+                value = self.cell(1, off_row + 1)
+                # Encounter string 'Dalyko vidurkis' in a list of digits
+                if value is None:
+                    break
+                off_row += 1
+            self._last_pupil_row = off_row
+        return self._last_pupil_row
+
+    def _find_attendance_column(self) -> int:
+        return self.average_mark_column + 1
+
+    def get_grade_name(self) -> str:
+        """Returns the name of the grade."""
+        val = self.cell(4, 5)
+        if isinstance(val, float):
+            return str(int(val))
+        if isinstance(val, int):
+            return str(val)
+        return val
+    
+    def get_group_name(self) -> str:
+        """Returns the name of the subject."""
+        return self.cell(4, 7)
+
+    def get_pupil_data(self) -> List[UnifiedPupil]:
+        """Returns a list of pupil objects."""
+        pupils = []
+        for row in range(18, self.last_pupil_row + 1):
+            pupils.append(UnifiedPupil(
+                self.cell(2, row), # type: ignore
+                self.get_pupil_subjects(row),
+                self.get_pupil_average(row),
+                self.get_pupil_attendance(row)
+            ))
+        return pupils
+
+    def get_pupil_subjects(self, student_row: int) -> List[UnifiedSubject]:
+        """Returns a list of pupil's subject objects."""
+        subjects = []
+        for col in range(6, self.average_mark_column):
+            # Resolve date item
+            raw_date = self.cell(col, 17).replace('\n', "-")
+            date = datetime.datetime.strptime(raw_date, "%m-%d")
+            date = date.replace(tzinfo=datetime.timezone.utc)
+            subjects.append(UnifiedSubject(
+                self.get_group_name(),
+                Mark(self.cell(col, student_row), date)
+            ))
+        return subjects
+
+    def create_summary(self) -> ClassPeriodReportSummary:
+        """Attempts to create a Summary object.
+
+        May raise an exception."""
+
+        # Check whether Excel file is of correct type
+        # TODO: investigate future proofing
+        if self.cell(1, 1) != "Ataskaita pagal grupę": # type: ignore
+            raise InvalidResourceTypeError
+
+        # Check whether group average is a zero, if it is, throw parsing error due to incomplete file
+        if self.cell(self.average_mark_column, self.last_pupil_row + 1) == 0:
+            raise InconclusiveResourceError
+
+        return ClassPeriodReportSummary(
+            self.get_grade_name(),
+            (self.term_start, self.term_end),
+            self.get_pupil_data()
+        )
+
+def parse_semester_summary_files(files: List[str]) -> List[ClassSemesterReportSummary]:
+    """Generates a list of semester type summaries."""
+    summaries: List[ClassSemesterReportSummary] = []
+    for filename in files:
+        start_time = timeit.default_timer()
+        base_name = os.path.basename(filename)
+
+        try:
+            parser = PupilSemesterReportParser(filename)
+            summary = parser.create_summary(fetch_subjects=True)
+            parser.close()
+        except ParsingError as e:
+            logger.error(f"{base_name}: {e}")
+            continue
+        except Exception as e:
+            logger.exception(f"{base_name}: {e}")
+            continue
+
+        if summary.type == "metinis":
+            logger.warn(f"{base_name}: metinė ataskaita yra nevertinama")
+            continue
+
+        if any(s for s in summaries if s.representable_name == summary.representable_name):
+            logger.warn(f"{base_name}: tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
+            continue
+
+        logger.debug(f"{base_name}: skaitymas užtruko {timeit.default_timer() - start_time}s")
+        summaries.append(summary)
+
+    if len(summaries) == 0:
+        logger.error("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
+    logger.debug(f"Pusmečių/trimestrų suvestinės sugeneruotos: {len(summaries)}")
+    return summaries
+
+def parse_periodic_summary_files(files: List[str]) -> List[ClassPeriodReportSummary]:
+        """Generates a list of periodic summaries."""
+        summaries: List[ClassPeriodReportSummary] = []
+        for filename in files:
+            start_time = timeit.default_timer()
+            base_name = os.path.basename(filename)
+
+            try:
+                parser = PupilPeriodicReportParser(filename)
+                summary = parser.create_summary(fetch_subjects=True)
+                parser.close()
+            except ParsingError as e:
+                logger.error(f"{base_name}: {e}")
+                continue
+            except Exception as e:
+                logger.exception(f"{base_name}: {e}")
+                continue
+
+            if any(s for s in summaries if s.representable_name == summary.representable_name):
+                logger.warn(f"{base_name}: tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
+                continue
+
+            if any(s.average is None for s in summary.students):
+                logger.warn(f"{base_name}: bent vieno mokinio vidurkis yra ne-egzistuojantis, neskaitoma")
+                continue
+
+            logger.debug(f"{base_name}: skaitymas užtruko {timeit.default_timer() - start_time}s")
+            summaries.append(summary)
+
+        if len(summaries) == 0:
+            logger.error("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
+        logger.debug(f"Laikotarpių suvestinės sugeneruotos: {len(summaries)}")
+        return summaries
+
+def parse_group_summary_files(files: List[str]) -> List[ClassPeriodReportSummary]:
+        """Generates a list of periodic summaries."""
+        summaries: List[ClassPeriodReportSummary] = []
+        for filename in files:
+            start_time = timeit.default_timer()
+            base_name = os.path.basename(filename)
+
+            try:
+                parser = GroupPeriodicReportParser(filename)
+                summary = parser.create_summary()
+                parser.close()
+            except ParsingError as e:
+                logger.error(f"{base_name}: {e}")
+                continue
+            except Exception as e:
+                logger.exception(f"{base_name}: {e}")
+                continue
+
+            if any(s for s in summaries if s.representable_name == summary.representable_name):
+                logger.warn(f"{base_name}: tokia ataskaita jau vieną kartą buvo pateikta ir perskaityta")
+                continue
+
+            if any(s.average is None for s in summary.students):
+                logger.warn(f"{base_name}: bent vieno mokinio vidurkis yra ne-egzistuojantis, neskaitoma")
+                continue
+
+            logger.debug(f"{base_name}: skaitymas užtruko {timeit.default_timer() - start_time}s")
+            summaries.append(summary)
+
+        if len(summaries) == 0:
+            logger.error("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
+        logger.debug(f"Laikotarpių suvestinės sugeneruotos: {len(summaries)}")
+        return summaries
+

@@ -360,6 +360,15 @@ class BaseGraph:
         self.app.matplotlib_window.load_from_graph(self)
         return self.app.matplotlib_window.show()
 
+class SingleSummaryGraph(BaseGraph):
+    
+    def __init__(self, app: App) -> None:
+        super().__init__(app)
+
+    def _load(self) -> None:
+        """Creates graph values from a summary."""
+        raise NotImplementedError
+
 class G(BaseGraph):
 
     def __init__(self, app: App, summaries: Union[List[ClassSemesterReportSummary], List[ClassPeriodReportSummary]]) -> None:
@@ -523,6 +532,66 @@ class UnifiedClassAttendanceGraph(UnifiedClassGraph):
 
     def acquire_labels(self) -> Tuple[str, str]:
         return 'Laikotarpis', 'Praleistų pamokų kiekis'
+
+class UnifiedGroupGraph(SingleSummaryGraph):
+    """A unified aggregated class graph."""
+
+    def __init__(
+        self,
+        app: App,
+        summary: Union[ClassSemesterReportSummary, ClassPeriodReportSummary]
+    ) -> None:
+        self.pupils: Dict[str, list] = {}
+        self.summary = summary
+        super().__init__(app)
+
+    def _load(self) -> None:
+        pupil_names = [s.name for s in self.summary.pupils]
+
+        # Determine graph title
+        first_summary_year = self.summary.term_start.year
+        last_summary_year = self.summary.term_end.year
+
+        self._title = f'Klasė: {self.summary.grade_name}\nPažymiai\n'
+        if first_summary_year == last_summary_year:
+            self._title += str(first_summary_year)
+        else:
+            self._title += f'{first_summary_year} m. - {last_summary_year} m.'
+
+        logger.info(f"Nagrinėjamas laikotarpis: {self.summary.full_representable_name}")
+        for pupil in self.summary.pupils:
+            # If student name is not in cache, ignore them
+            if pupil.name not in pupil_names:
+                logger.warn(f"Mokinys '{pupil.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
+                continue
+
+    def _anonymize_pupil_names(self) -> None:
+        """Anonymizes the names of pupils in the graph."""
+        names = ["Antanas", "Bernardas", "Cezis", "Dainius", "Ernestas", "Henrikas", "Jonas", "Petras", "Tilius"]
+        surnames = ["Antanivičius", "Petraitis", "Brazdžionis", "Katiliškis", "Mickevičius", "Juozevičius", "Eilėraštinis"]
+        new_dict = {}
+        cached_combinations = []
+
+        # Shuffle student names to avoid being recognized by the position in the legend
+        student_names = list(self.pupils.keys())
+        shuffle(student_names)
+
+        for student in student_names:
+            name = choice(names) + " " + choice(surnames)
+            while name in cached_combinations:
+                name = choice(names) + " " + choice(surnames)
+            new_dict[name] = self.pupils[student]
+            cached_combinations.append(name)
+        self.pupils = new_dict
+
+    def get_graph_values(self) -> List[GraphValue]:
+        return [GraphValue(p.name, [m.mark.clean for m in p.subjects]) for p in self.summary.pupils]
+
+    def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
+        # Anonymize names when displaying for unauthorized people, in order to prevent disclosing of any additional data
+        if self.app.settings.hide_names:
+            self._anonymize_pupil_names()
+        return ([s.mark.date.strftime("%m-%d") for s in self.summary.pupils[0].subjects], self.get_graph_values())
 
 class AbstractPupilAveragesGraph(G):
     """A unified abstract class pupil averages graph."""

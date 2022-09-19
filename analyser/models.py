@@ -1,4 +1,5 @@
 from __future__ import annotations
+import datetime
 
 import logging
 
@@ -76,8 +77,9 @@ COMMON_GENERIC_NAMES = {
 
 class Mark:
 
-    def __init__(self, raw_value: Optional[Union[int, float, str]]) -> None:
+    def __init__(self, raw_value: Optional[Union[int, float, str]], date: Optional[datetime.datetime] = None) -> None:
         self.raw_value = raw_value
+        self.date = date
 
     def __repr__(self) -> str:
         return f'<Mark raw="{self.raw_value}">'
@@ -107,6 +109,8 @@ class Mark:
         if self.raw_value == "nsk":
             return False
         if self.raw_value == "atl":
+            return None
+        if self.raw_value == "n":
             return None
         if self.raw_value.endswith("val.") or self.raw_value.endswith("val"):
             return None
