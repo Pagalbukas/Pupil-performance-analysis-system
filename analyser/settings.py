@@ -34,7 +34,7 @@ class Settings:
         self.outlined_values = data.get("outlined_values", True)
         self.corner_legend = data.get("corner_legend", True)
         self.styled_colouring = data.get("styled_colouring", True)
-        self.styled_colouring = data.get("mano_dienynas_url", "https://www.manodienynas.lt")
+        self.mano_dienynas_url = data.get("mano_dienynas_url", "https://www.manodienynas.lt")
 
     def _serialize(self) -> str:
         return json.dumps({
