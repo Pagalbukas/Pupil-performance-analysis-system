@@ -18,6 +18,7 @@ class Settings:
         outlined_values: bool
         corner_legend: bool
         styled_colouring: bool
+        mano_dienynas_url: str
 
     def __init__(self, auto_load: bool = True) -> None:
         if auto_load:
@@ -33,6 +34,7 @@ class Settings:
         self.outlined_values = data.get("outlined_values", True)
         self.corner_legend = data.get("corner_legend", True)
         self.styled_colouring = data.get("styled_colouring", True)
+        self.styled_colouring = data.get("mano_dienynas_url", "https://www.manodienynas.lt")
 
     def _serialize(self) -> str:
         return json.dumps({
@@ -44,7 +46,8 @@ class Settings:
             "last_ver": self.last_ver,
             "outlined_values": self.outlined_values,
             "corner_legend": self.corner_legend,
-            "styled_colouring": self.styled_colouring
+            "styled_colouring": self.styled_colouring,
+            "mano_dienynas_url": self.mano_dienynas_url
         })
 
     def _xor_bytes(self, data: bytes) -> bytes:

@@ -679,7 +679,7 @@ class App(QtWidgets.QWidget):
 
         self.settings = settings
         self.debug = settings.debugging
-        self.client = Client()
+        self.client = Client(settings.mano_dienynas_url)
 
         if self.debug:
             logger.setLevel(logging.DEBUG)
