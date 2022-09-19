@@ -12,3 +12,4 @@ build
 install-script.nsi
 # Ignore virtual environment
 python/
+venv/
