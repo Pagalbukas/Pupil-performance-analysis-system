@@ -1,22 +1,10 @@
 from __future__ import annotations
 
-import os
-import platform
-import sys
-import timeit
 import logging
 
-from logging.handlers import RotatingFileHandler
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING
 
-from analyser.errors import ParsingError
-from analyser.files import EXECUTABLE_PATH, get_home_dir, get_log_file
-from analyser.mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class # type: ignore
-from analyser.parsing import GroupPeriodicReportParser, PupilSemesterReportParser, PupilPeriodicReportParser
-from analyser.settings import Settings
-from analyser.summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
 from analyser.qt_compat import QtWidgets, QtCore, QtGui, Qt
-from analyser.widgets.settings import SettingsWidget
 
 logger = logging.getLogger("analizatorius")
 
@@ -64,7 +52,9 @@ class LoginTaskWorker(QtCore.QObject):
             self.app.client.logout()
             return self.error.emit(
                 "Paskyra neturi reikiamų vartotojo teisių. "
-                "Kol kas palaikomos tik paskyros su 'Klasės vadovas' ir 'Sistemos administratorius' tipais."
+                "Kol kas palaikomos tik paskyros su 'Klasės vadovas' ir 'Sistemos administratorius' tipais.\n"
+                "Jeigu esate dalyko mokytojas, programa kol kas negali automatiškai atsiųsti grupių ataskaitų. "
+                "Tai reikia padaryti rankiniu būdų, atsisiunčiant 'Ataskaita pagal grupę' visiems metams."
             )
 
         # Attempt automatic role change
@@ -156,8 +146,10 @@ class LoginWidget(QtWidgets.QWidget):
         self.enable_gui()
         if role_selected:
             self.app.select_class_widget.update_data()
+            self.app.set_window_title("Nagrinėjama klasė")
             return self.app.change_stack(self.app.SELECT_CLASS_WIDGET)
         self.app.select_user_role_widget.update_list()
+        self.app.set_window_title("Vartotojo tipas")
         self.app.change_stack(self.app.SELECT_USER_ROLE_WIDGET)
 
     def login(self) -> None:

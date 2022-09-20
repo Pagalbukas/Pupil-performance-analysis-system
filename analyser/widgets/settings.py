@@ -117,7 +117,7 @@ class SettingsWidget(QtWidgets.QWidget):
         def ok(data: dict):
             self.update_check_thread.quit()
 
-            maj_cur, min_cur, pat_cur = self.app.version
+            maj_cur, min_cur, pat_cur, _ = self.app.version
             maj_rem, min_rem, pat_rem = data["latest_version"]
 
             if maj_cur > maj_rem:
@@ -171,4 +171,4 @@ class SettingsWidget(QtWidgets.QWidget):
         self.unsaved = False
         self.app.settings.last_ver = list(self.app.version)
         self.app.settings.save()
-        self.app.change_stack(self.app.MAIN_WIDGET)
+        self.app.go_to_back()

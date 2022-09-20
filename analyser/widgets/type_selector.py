@@ -4,7 +4,7 @@ import logging
 
 from typing import TYPE_CHECKING
 
-from analyser.qt_compat import QtWidgets, QtCore, Qt
+from analyser.qt_compat import QtWidgets
 from analyser.parsing import parse_group_summary_files, parse_periodic_summary_files, parse_semester_summary_files
 
 logger = logging.getLogger("analizatorius")
@@ -27,7 +27,7 @@ class ManualFileSelectorWidget(QtWidgets.QWidget):
         semester_button.clicked.connect(self.on_semester_button_click)
         period_button.clicked.connect(self.on_period_button_click)
         group_button.clicked.connect(self.on_group_button_click)
-        return_button.clicked.connect(self.app.go_to_back())
+        return_button.clicked.connect(self.app.go_to_back)
 
         layout.addWidget(semester_button) # type: ignore
         layout.addWidget(period_button) # type: ignore

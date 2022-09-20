@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, List, Optional
 from analyser.graphing import (
     PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph
 )
-from analyser.summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
-from analyser.qt_compat import QtWidgets, QtCore, QtGui, Qt
+from analyser.summaries import ClassPeriodReportSummary
+from analyser.qt_compat import QtWidgets
 
 logger = logging.getLogger("analizatorius")
 
@@ -60,8 +60,8 @@ class GroupViewTypeSelectorWidget(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout()
         shared_averages_button = QtWidgets.QPushButton("Bendri klasės vidurkiai")
-        shared_attendance_button = QtWidgets.QPushButton("Bendras klasės lankomumas")
-        individual_pupil_button = QtWidgets.QPushButton("Individualūs mokinių duomenys")
+        shared_attendance_button = QtWidgets.QPushButton("Bendras klasės lankomumas (greitai...)")
+        individual_pupil_button = QtWidgets.QPushButton("Individualūs mokinių duomenys (greitai...)")
         return_button = QtWidgets.QPushButton('Grįžti į pradžią')
 
         shared_averages_button.clicked.connect(self.on_shared_averages_button_click)
@@ -69,6 +69,7 @@ class GroupViewTypeSelectorWidget(QtWidgets.QWidget):
         individual_pupil_button.clicked.connect(self.on_individual_pupil_button_click)
         return_button.clicked.connect(self.app.go_to_back)
         
+        shared_attendance_button.setEnabled(False)
         individual_pupil_button.setEnabled(False)
 
         layout.addWidget(shared_averages_button) # type: ignore

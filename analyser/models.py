@@ -110,8 +110,15 @@ class Mark:
             return False
         if self.raw_value == "atl":
             return None
+        
+        # Absence mark
         if self.raw_value == "n":
             return None
+        if self.raw_value == "nk":
+            return None
+        if self.raw_value == "nl":
+            return None
+        
         if self.raw_value.endswith("val.") or self.raw_value.endswith("val"):
             return None
 

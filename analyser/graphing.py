@@ -38,12 +38,27 @@ from matplotlib.text import Annotation  # type: ignore # noqa: E402
 from analyser.errors import GraphingError
 from analyser.qt_compat import Qt
 
+MONTH_NAMES = {
+    1: "Sausis",
+    2: "Vasaris",
+    3: "Kovas",
+    4: "Balandis",
+    5: "Gegužė",
+    6: "Birželis",
+    7: "Liepa",
+    8: "Rugpjūtis",
+    9: "Rugsėjis",
+    10: "Spalis",
+    11: "Lapkritis",
+    12: "Gruodis"
+}
+
+logger = logging.getLogger("analizatorius")
+
 if TYPE_CHECKING:
     from analyser.app import App
     from analyser.models import UnifiedPupil
     from analyser.summaries import ClassPeriodReportSummary, ClassSemesterReportSummary
-
-logger = logging.getLogger("analizatorius")
 
 # Modify default save figure to have more fine-grained control over available file formats
 def save_figure(self, *args):
@@ -364,6 +379,7 @@ class SingleSummaryGraph(BaseGraph):
     
     def __init__(self, app: App) -> None:
         super().__init__(app)
+        self._load()
 
     def _load(self) -> None:
         """Creates graph values from a summary."""
@@ -533,65 +549,79 @@ class UnifiedClassAttendanceGraph(UnifiedClassGraph):
     def acquire_labels(self) -> Tuple[str, str]:
         return 'Laikotarpis', 'Praleistų pamokų kiekis'
 
-class UnifiedGroupGraph(SingleSummaryGraph):
-    """A unified aggregated class graph."""
+class UnifiedGroupAveragesGraph(SingleSummaryGraph):
+    """A unified group pupil averages graph."""
 
     def __init__(
         self,
         app: App,
         summary: Union[ClassSemesterReportSummary, ClassPeriodReportSummary]
     ) -> None:
-        self.pupils: Dict[str, list] = {}
         self.summary = summary
+        self.months: List[int] = []
+        self.pupil_averages: dict = {}
         super().__init__(app)
 
     def _load(self) -> None:
-        pupil_names = [s.name for s in self.summary.pupils]
-
         # Determine graph title
         first_summary_year = self.summary.term_start.year
         last_summary_year = self.summary.term_end.year
+        group_name = self.summary.pupils[0].subjects[0].name.strip()
 
-        self._title = f'Klasė: {self.summary.grade_name}\nPažymiai\n'
+        self._title = f'Grupė: {group_name}\nVidurkiai\n'
         if first_summary_year == last_summary_year:
             self._title += str(first_summary_year)
         else:
             self._title += f'{first_summary_year} m. - {last_summary_year} m.'
 
         logger.info(f"Nagrinėjamas laikotarpis: {self.summary.full_representable_name}")
-        for pupil in self.summary.pupils:
-            # If student name is not in cache, ignore them
-            if pupil.name not in pupil_names:
-                logger.warn(f"Mokinys '{pupil.name}' ignoruojamas, nes nėra naujausioje suvestinėje")
+        
+        # Parse available months and store them in a list
+        dates = [s.mark.date for s in self.summary.pupils[0].subjects]
+        for date in dates:
+            if date.month in self.months:
                 continue
+            self.months.append(date.month)
 
-    def _anonymize_pupil_names(self) -> None:
-        """Anonymizes the names of pupils in the graph."""
-        names = ["Antanas", "Bernardas", "Cezis", "Dainius", "Ernestas", "Henrikas", "Jonas", "Petras", "Tilius"]
-        surnames = ["Antanivičius", "Petraitis", "Brazdžionis", "Katiliškis", "Mickevičius", "Juozevičius", "Eilėraštinis"]
-        new_dict = {}
-        cached_combinations = []
+        # I hate this
+        # TODO: clean this up
+        # Temporary dict for storing pupil mark data
+        data = {}
+        for pupil in self.summary.pupils:
+            # Initialize pupil entries in a dict
+            data[pupil.name] = [[None, 0] for _ in range(len(self.months))]
 
-        # Shuffle student names to avoid being recognized by the position in the legend
-        student_names = list(self.pupils.keys())
-        shuffle(student_names)
+            # Go over each pupil mark, check months, whether they match
+            # add store information in a specific index [total, mark_count]
+            for subject in pupil.subjects:
+                for i, month in enumerate(self.months):
+                    if subject.mark.date.month == month:
+                        if subject.mark.clean is not None:
+                            data[pupil.name][i][1] += 1 # increase valid count mark in month
+                            if data[pupil.name][i][0] is None:
+                                data[pupil.name][i][0] = 0 # initialize mark of 0 if it was none
+                            data[pupil.name][i][0] += subject.mark.clean # sum marks
+                        break
 
-        for student in student_names:
-            name = choice(names) + " " + choice(surnames)
-            while name in cached_combinations:
-                name = choice(names) + " " + choice(surnames)
-            new_dict[name] = self.pupils[student]
-            cached_combinations.append(name)
-        self.pupils = new_dict
+            # Overwrite data by calculations
+            for i, value in enumerate(data[pupil.name]):
+                val, count = value
+                if count == 0:
+                    data[pupil.name][i] = None
+                    continue
+                data[pupil.name][i] = round(val / count, 2)
+        
+        # Save data
+        self.pupil_averages = data
+
+    def acquire_labels(self) -> Tuple[str, str]:
+        return 'Mėnėsiai', 'Vidurkis'
 
     def get_graph_values(self) -> List[GraphValue]:
-        return [GraphValue(p.name, [m.mark.clean for m in p.subjects]) for p in self.summary.pupils]
+        return [GraphValue(p.name, self.pupil_averages[p.name]) for p in self.summary.pupils]
 
     def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
-        # Anonymize names when displaying for unauthorized people, in order to prevent disclosing of any additional data
-        if self.app.settings.hide_names:
-            self._anonymize_pupil_names()
-        return ([s.mark.date.strftime("%m-%d") for s in self.summary.pupils[0].subjects], self.get_graph_values())
+        return ([MONTH_NAMES.get(m, str(m)) for m in self.months], self.get_graph_values())
 
 class AbstractPupilAveragesGraph(G):
     """A unified abstract class pupil averages graph."""

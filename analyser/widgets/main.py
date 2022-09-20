@@ -13,7 +13,7 @@ logger = logging.getLogger("analizatorius")
 if TYPE_CHECKING:
     from analyser.app import App
 
-class MainWidget2(QtWidgets.QWidget):
+class MainWidget(QtWidgets.QWidget):
 
     def __init__(self, app: App) -> None:
         super().__init__()
@@ -21,7 +21,7 @@ class MainWidget2(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout()
         
-        manual_upload_button = QtWidgets.QPushButton("Įkelti ataskaitas rankiniu būdų (failai)")
+        manual_upload_button = QtWidgets.QPushButton("Įkelti ataskaitas rankiniu būdu (failai)")
         auto_upload_button = QtWidgets.QPushButton("Įkelti ataskaitas iš Mano Dienyno sistemos automatiškai")
         settings_button = QtWidgets.QPushButton("Nustatymai")
         notice_label = QtWidgets.QLabel()
@@ -29,10 +29,11 @@ class MainWidget2(QtWidgets.QWidget):
         manual_upload_button.clicked.connect(self.on_manual_upload_button_click)
         auto_upload_button.clicked.connect(self.on_auto_upload_button_click)
         settings_button.clicked.connect(self.on_settings_button_click)
+        
+        print(self.app.version[:3])
 
-        major, minor, patch = app.version
-
-        notice_label.setText(f"<a href=\"{REPO_URL}\">v{major}.{minor}.{patch} Dominykas Svetikas © 2022</a>")
+        major, minor, patch, build = app.version
+        notice_label.setText(f"<a href=\"{REPO_URL}\">v{major}.{minor}.{patch}.{build} Dominykas Svetikas © 2022</a>")
         notice_label.setTextFormat(Qt.RichText)
         notice_label.setTextInteractionFlags(Qt.TextBrowserInteraction) # type: ignore
         notice_label.setOpenExternalLinks(True)
@@ -47,19 +48,23 @@ class MainWidget2(QtWidgets.QWidget):
 
     def on_settings_button_click(self) -> None:
         self.app.settings_widget.load_state()
+        self.app.set_window_title("Nustatymai")
         self.app.change_stack(self.app.SETTINGS_WIDGET)
 
     def on_manual_upload_button_click(self) -> None:
+        self.app.set_window_title("Rankinis įkėlimas")
         self.app.change_stack(self.app.MANUAL_SELECTOR)
 
     def on_auto_upload_button_click(self) -> None:
-        
         if self.app.client.is_logged_in:
             if len(self.app.client.get_filtered_user_roles()) == 1:
                 self.app.select_class_widget.update_data()
+                self.app.set_window_title("Nagrinėjama klasė")
                 return self.app.change_stack(self.app.SELECT_CLASS_WIDGET)
+            self.app.set_window_title("Vartotojo tipas")
             return self.app.change_stack(self.app.SELECT_USER_ROLE_WIDGET)
         
         self.app.login_widget.clear_fields()
         self.app.login_widget.fill_fields()
+        self.app.set_window_title("Prisijungimas")
         self.app.change_stack(self.app.LOGIN_WIDGET)

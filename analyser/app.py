@@ -1,40 +1,36 @@
 from __future__ import annotations
-from ctypes import Union
 
 import os
 import platform
 import sys
-import timeit
 import logging
 
 from logging.handlers import RotatingFileHandler
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
-from analyser.errors import ParsingError
 from analyser.files import EXECUTABLE_PATH, get_home_dir, get_log_file
 from analyser.graphing import (
-    MatplotlibWindow, PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph,
-    UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph, UnifiedGroupGraph
+    MatplotlibWindow, UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph, UnifiedGroupAveragesGraph
 )
 from analyser.mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class # type: ignore
-from analyser.parsing import GroupPeriodicReportParser, PupilSemesterReportParser, PupilPeriodicReportParser, parse_periodic_summary_files
+from analyser.parsing import parse_periodic_summary_files
 from analyser.settings import Settings
-from analyser.summaries import ClassSemesterReportSummary, ClassPeriodReportSummary
+from analyser.summaries import ClassPeriodReportSummary
 from analyser.qt_compat import QtWidgets, QtCore, QtGui, Qt
-from analyser.widgets.main import MainWidget2
+from analyser.widgets.main import MainWidget
 from analyser.widgets.login import LoginWidget
 from analyser.widgets.settings import SettingsWidget
 from analyser.widgets.type_selector import ManualFileSelectorWidget
 from analyser.widgets.view import GroupViewTypeSelectorWidget, PeriodicViewTypeSelectorWidget, PupilSelectionWidget
 
-__VERSION__ = (1, 2, 1)
-__VERSION_NAME = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}"
+__VERSION__ = (1, 3, 0, 1)
+__VERSION_NAME__ = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}.{__VERSION__[3]}"
 REPO_URL = "https://mokytojams.svetikas.lt/"
 
 logger = logging.getLogger("analizatorius")
 logger.setLevel(logging.INFO)
 
-formatter = logging.Formatter(f'[%(asctime)s %(name)s-{__VERSION_NAME}:%(levelname)s]: %(message)s', "%Y-%m-%d %H:%M:%S")
+formatter = logging.Formatter(f'[%(asctime)s %(name)s-{__VERSION_NAME__}:%(levelname)s]: %(message)s', "%Y-%m-%d %H:%M:%S")
 
 fh = RotatingFileHandler(get_log_file(), encoding="utf-8", maxBytes=1024 * 512, backupCount=10)
 fh.setFormatter(formatter)
@@ -364,7 +360,7 @@ class App(QtWidgets.QWidget):
                 ch.setLevel(logging.DEBUG)
             logger.debug(f"Loaded modules: {list(sys.modules.keys())}")
 
-        self.setWindowTitle('Mokinių pasiekimų ir lankomumo stebėsenos sistema')
+        self.set_window_title("Pagrindinis")
         self.setWindowIcon(QtGui.QIcon(
             os.path.join(EXECUTABLE_PATH, 'icon.png')
         ))
@@ -377,7 +373,7 @@ class App(QtWidgets.QWidget):
         self.stack = QtWidgets.QStackedWidget()
         
         # Initialize core widgets
-        self.main_widget = MainWidget2(self)
+        self.main_widget = MainWidget(self)
         self.settings_widget = SettingsWidget(self)
         self.matplotlib_window = MatplotlibWindow(self)
         
@@ -414,6 +410,11 @@ class App(QtWidgets.QWidget):
 
         self.initUI()
 
+    def set_window_title(self, section: str):
+        if section is None:
+            return self.setWindowTitle(f'Mokinių pasiekimų ir lankomumo stebėsenos sistema')
+        self.setWindowTitle(f'Mokinių pasiekimų ir lankomumo stebėsenos sistema | {section}')
+
     def _display_graph(self, graph: UnifiedClassAveragesGraph):
         try:
             graph.display()
@@ -431,30 +432,33 @@ class App(QtWidgets.QWidget):
         self._display_graph(UnifiedClassAttendanceGraph(self, summaries))
 
     def display_group_pupil_marks_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
-        self._display_graph(UnifiedGroupGraph(self, summaries[0]))
+        self._display_graph(UnifiedGroupAveragesGraph(self, summaries[0]))
 
     def go_to_back(self) -> None:
         """Return to the main widget."""
-        self.view_aggregated = False
-        self.view_attendance = False
+        self.set_window_title("Pagrindinis")
         self.change_stack(self.MAIN_WIDGET)
         
     def open_periodic_type_selector(self, summaries):
         self.periodic_view_selector_widget._update_summary_list(summaries)
+        self.set_window_title("Klasės grafiko tipas")
         self.change_stack(self.PERIODIC_TYPE_SELECTOR)
 
     def open_group_type_selector(self, summaries):
         self.group_view_selector_widget._update_summary_list(summaries)
+        self.set_window_title("Grupės grafiko tipas")
         self.change_stack(self.GROUP_TYPE_SELECTOR)
         
     def open_individual_period_pupil_graph_selector(self, summaries):
         self.select_pupil_widget.disable_buttons()
         self.select_pupil_widget.update_data(summaries)
+        self.set_window_title("Nagrinėjamas mokinys")
         self.change_stack(self.SELECT_PUPIL_WIDGET)
     
     def open_individual_group_pupil_graph_selector(self, summaries):
         self.select_pupil_widget.disable_buttons()
         self.select_pupil_widget.update_data(summaries)
+        self.set_window_title("Nagrinėjamas mokinys")
         self.change_stack(self.SELECT_PUPIL_WIDGET)
 
     def change_stack(self, index: int) -> None:
