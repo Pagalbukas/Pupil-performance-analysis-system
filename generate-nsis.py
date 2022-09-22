@@ -5,7 +5,7 @@ from typing import List
 DEFINITIONS = {
     "APP_NAME": "Mokinių pasiekimų ir lankomumo stebėsenos sistema",
     "COMP_NAME": "Dominykas Svetikas",
-    "VERSION": "1.2.3.1",
+    "VERSION": "1.3.0.2",
     "COPYRIGHT": "Dominykas Svetikas © 2022",
     "DESCRIPTION": "Application",
     "INSTALLER_NAME": "Analizatorius.exe",

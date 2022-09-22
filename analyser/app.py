@@ -24,7 +24,7 @@ from analyser.widgets.settings import SettingsWidget
 from analyser.widgets.type_selector import ManualFileSelectorWidget
 from analyser.widgets.view import GroupViewTypeSelectorWidget, PeriodicViewTypeSelectorWidget, PupilSelectionWidget
 
-__VERSION__ = (1, 3, 0, 1)
+__VERSION__ = (1, 3, 0, 2)
 __VERSION_NAME__ = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}.{__VERSION__[3]}"
 REPO_URL = "https://mokytojams.svetikas.lt/"
 
