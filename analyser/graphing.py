@@ -10,7 +10,6 @@ import matplotlib # type: ignore
 # Tell matplotlib to use QtAgg explicitly
 matplotlib.use('QtAgg')
 
-from random import choice, shuffle
 from types import MethodType
 from typing import (
     TYPE_CHECKING,
@@ -379,11 +378,14 @@ class SingleSummaryGraph(BaseGraph):
     
     def __init__(self, app: App) -> None:
         super().__init__(app)
-        self._load()
 
     def _load(self) -> None:
         """Creates graph values from a summary."""
         raise NotImplementedError
+    
+    def display(self) -> None:
+        self._load()
+        return super().display()
 
 class G(BaseGraph):
 
@@ -435,32 +437,10 @@ class UnifiedClassGraph(G):
             pupil = self.pupils[name]
         return pupil
 
-    def _anonymize_pupil_names(self) -> None:
-        """Anonymizes the names of pupils in the graph."""
-        names = ["Antanas", "Bernardas", "Cezis", "Dainius", "Ernestas", "Henrikas", "Jonas", "Petras", "Tilius"]
-        surnames = ["Antanivičius", "Petraitis", "Brazdžionis", "Katiliškis", "Mickevičius", "Juozevičius", "Eilėraštinis"]
-        new_dict = {}
-        cached_combinations = []
-
-        # Shuffle student names to avoid being recognized by the position in the legend
-        student_names = list(self.pupils.keys())
-        shuffle(student_names)
-
-        for student in student_names:
-            name = choice(names) + " " + choice(surnames)
-            while name in cached_combinations:
-                name = choice(names) + " " + choice(surnames)
-            new_dict[name] = self.pupils[student]
-            cached_combinations.append(name)
-        self.pupils = new_dict
-
     def get_graph_values(self) -> List[GraphValue]:
         return [GraphValue(n, self.pupils[n]) for n in self.pupils.keys()]
 
     def acquire_axes(self) -> Tuple[List[str], List[GraphValue]]:
-        # Anonymize names when displaying for unauthorized people, in order to prevent disclosing of any additional data
-        if self.app.settings.hide_names:
-            self._anonymize_pupil_names()
         return (self.period_names, self.get_graph_values())
 
 
@@ -565,7 +545,7 @@ class UnifiedGroupAveragesGraph(SingleSummaryGraph):
     def _load(self) -> None:
         # Determine graph title
         first_summary_year = self.summary.term_start.year
-        last_summary_year = self.summary.term_end.year
+        last_summary_year = self.summary.term_end.year    
         group_name = self.summary.pupils[0].subjects[0].name.strip()
 
         self._title = f'Grupė: {group_name}\nVidurkiai\n'

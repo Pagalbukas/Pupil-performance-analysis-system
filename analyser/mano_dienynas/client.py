@@ -30,6 +30,10 @@ class UserRole:
         if self.classes is None:
             return f'<UserRole title="{self.title}" classes=None school_name="{self.school_name}" is_active={self.is_active}>' # noqa
         return f'<UserRole title="{self.title}" classes="{self.classes}" school_name="{self.school_name}" is_active={self.is_active}>' # noqa
+    
+    @property
+    def is_teacher(self) -> bool:
+        return self.title == "Mokytojas"
 
     @property
     def representable_name(self) -> str:
@@ -62,7 +66,15 @@ class Class:
     def __repr__(self) -> str:
         return f'<Class id="{self.id}" name="{self.name}">'
 
-class UnifiedAveragesReportGenerator:
+class Group:
+    def __init__(self, group_id: str, name: str) -> None:
+        self.id = group_id
+        self.name = name
+
+    def __repr__(self) -> str:
+        return f'<Group id="{self.id}" name="{self.name}">'
+
+class ClassAveragesReportGenerator:
     def __init__(self, client: Client, class_id: str, dates: List[Tuple[datetime.datetime, datetime.datetime]]) -> None:
         self._client = client
         self.class_id = class_id
@@ -70,7 +82,7 @@ class UnifiedAveragesReportGenerator:
         self.generated_count = 0
 
     def __repr__(self) -> str:
-        return f'<UnifiedAveragesReportGenerator class_id="{self.class_id}">'
+        return f'<ClassAveragesReportGenerator class_id="{self.class_id}">'
 
     @property
     def expected_period_report_count(self) -> int:
@@ -116,6 +128,18 @@ class UnifiedAveragesReportGenerator:
 
         for date in dates:
             yield self._client.generate_class_averages_report(self.class_id, date[0], date[1])
+
+class GroupReportGenerator:
+    def __init__(self, client: Client, group_id: str, dates: List[Tuple[datetime.datetime, datetime.datetime]]) -> None:
+        self._client = client
+        self.group_id = group_id
+        self.dates = dates
+
+    def __repr__(self) -> str:
+        return f'<GroupReportGenerator group_id="{self.group_id}">'
+    
+    def generate_report(self):
+        yield self._client.generate_group_report(self.group_id, self.dates[0][0], self.dates[-1][-1])
 
 class Client:
     HEADERS = {
@@ -187,6 +211,7 @@ class Client:
             if r.title == "Klasės vadovas"
             or r.title == "Sistemos administratorius"
             or r.title == "Administracija"
+            or r.title == "Mokytojas"
         ]
 
     def get_user_roles(self) -> List[UserRole]:
@@ -215,7 +240,39 @@ class Client:
         self._cached_roles = roles
         return roles
 
-    def get_class_averages_report_options(self, class_id: str = None) -> Union[UnifiedAveragesReportGenerator, List[Class]]:
+    def fetch_user_groups(self) -> List[Group]:
+        """Returns a list of groups for the currently active user role."""
+        r = self.request("GET", self.BASE_URL + "/1/lt/page/report/choose_normal/81")
+        tree: _ElementTree = etree.parse(StringIO(r.text), PARSER)
+        form: ElementBase = tree.find("//form[@name='reportNormalForm']")
+        groups = []
+        group_select_elem: ElementBase = form.find(".//select[@id='GroupNormal']")
+        for opt in group_select_elem.getchildren():
+            assert isinstance(opt, etree._Element)
+            value = opt.attrib["value"]
+            if value == "0":
+                continue
+            groups.append(Group(value, opt.text.strip()))
+        return groups
+    
+    def fetch_group_report_options(self, group_id: str) -> GroupReportGenerator:
+        r = self.request("GET", self.BASE_URL + f"/1/lt/page/report/choose_normal/81/{group_id}")
+        tree: _ElementTree = etree.parse(StringIO(r.text), PARSER)
+        form: ElementBase = tree.find("//form[@name='reportNormalForm']")
+        date_quick_select_elems: List[ElementBase] = form.xpath(".//a[@class='termDateSetter whiteButton']")
+        if len(date_quick_select_elems) % 2 != 0:
+            raise ClientError("Neįmanoma automatiškai nustatyti trimestrų/pusmečių laikotarpių!")
+        half = len(date_quick_select_elems) // 2
+        dates = []
+        for e in date_quick_select_elems:
+            date = datetime.datetime.strptime(e.attrib["href"], "%Y-%m-%d")
+            dates.append(date.replace(tzinfo=datetime.timezone.utc))
+        new_dates = []
+        for i in range(half - 1):
+            new_dates.append((dates[:half][i], dates[half:][i]))
+        return GroupReportGenerator(self, group_id, new_dates)
+
+    def get_class_averages_report_options(self, class_id: str = None) -> Union[ClassAveragesReportGenerator, List[Class]]:
         """Returns response for selecting monthly averages report."""
         if class_id is None:
             r = self.request("GET", self.BASE_URL + "/1/lt/page/report/choose_normal/12")
@@ -239,7 +296,7 @@ class Client:
             new_dates = []
             for i in range(half - 1):
                 new_dates.append((dates[:half][i], dates[half:][i]))
-            return UnifiedAveragesReportGenerator(self, class_id, new_dates)
+            return ClassAveragesReportGenerator(self, class_id, new_dates)
 
         # Otherwise, return a list of Class classes for selection
         classes = []
@@ -251,6 +308,56 @@ class Client:
                 continue
             classes.append(Class(value, opt.text.strip()))
         return classes
+
+    def generate_group_report(
+        self,
+        group_id: str,
+        term_start: datetime.datetime,
+        term_end: datetime.datetime
+    ) -> str:
+        """Generates averages report for specified class and period.
+        Returns a path to the generated file."""
+        date_from = term_start.strftime("%Y-%m-%d")
+        date_to = term_end.strftime("%Y-%m-%d")
+        req_dict = {
+            "ReportNormal": "81", # Generate group report
+            "GroupNormal": group_id,
+            "DateFromNormal": date_from,
+            "DateToNormal": date_to,
+            "FileTypeNormal": "0",
+            "submitNormal": ""
+        }
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        timestamp = now.timestamp()
+
+        # This handles cache
+        for file in os.listdir(get_temp_dir()):
+            file_path = os.path.join(get_temp_dir(), file)
+
+            # Remove files which are a week old based on filesystem reporting
+            if timestamp - 60 * 60 * 24 * 7 > os.path.getmtime(file_path):
+                os.remove(file_path)
+                continue
+
+            # Handle still potentially cached files
+            split = file[1:].split("_")
+            f_group_id, period_start, period_end, time_generated = split
+            if file[0] == "g" and f_group_id == group_id and period_start == date_from and period_end == date_to:
+                if timestamp - 60 * 60 < int(time_generated.split(".")[0]):
+                    return file_path
+                os.remove(file_path)
+
+        file_name = f'g{group_id}_{date_from}_{date_to}_{int(timestamp)}.xls'
+        file_path = os.path.join(get_temp_dir(), file_name)
+
+        request = self.request(
+            "POST", self.BASE_URL + f"/1/lt/page/report/choose_normal/81/{group_id}",
+            req_dict, timeout=60
+        )
+        with open(file_path, "wb") as f:
+            f.write(request.content)
+        return file_path
 
     def generate_class_averages_report(
         self,

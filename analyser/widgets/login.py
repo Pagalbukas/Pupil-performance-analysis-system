@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from analyser.app import App
 
 class LoginTaskWorker(QtCore.QObject):
-    success = QtCore.Signal(bool)
+    success = QtCore.Signal()
     error = QtCore.Signal(str)
 
     def __init__(self, app: App, username: str, password: str) -> None:
@@ -52,22 +52,9 @@ class LoginTaskWorker(QtCore.QObject):
             self.app.client.logout()
             return self.error.emit(
                 "Paskyra neturi reikiamų vartotojo teisių. "
-                "Kol kas palaikomos tik paskyros su 'Klasės vadovas' ir 'Sistemos administratorius' tipais.\n"
-                "Jeigu esate dalyko mokytojas, programa kol kas negali automatiškai atsiųsti grupių ataskaitų. "
-                "Tai reikia padaryti rankiniu būdų, atsisiunčiant 'Ataskaita pagal grupę' visiems metams."
+                "Palaikomos tik paskyros su 'Klasės vadovas', 'Mokytojas' ir 'Sistemos administratorius' tipais."
             )
-
-        # Attempt automatic role change
-        if len(roles) == 1:
-            if not roles[0].is_active:
-                try:
-                    roles[0].change_role()
-                except Exception as e:
-                    logger.exception(e)
-                    return self.error.emit(str(e))
-            logger.info(f"Paskyros tipas pasirinktas automatiškai į '{roles[0].title}'")
-
-        self.success.emit(len(roles) == 1)
+        self.success.emit()
 
 class LoginWidget(QtWidgets.QWidget):
 
@@ -140,15 +127,11 @@ class LoginWidget(QtWidgets.QWidget):
         self.propagate_error(error)
         self.login_thread.quit()
 
-    def on_success_signal(self, role_selected: bool) -> None:
+    def on_success_signal(self) -> None:
         """Callback of LoginTaskWorker thread on success."""
         self.login_thread.quit()
         self.enable_gui()
-        if role_selected:
-            self.app.select_class_widget.update_data()
-            self.app.set_window_title("Nagrinėjama klasė")
-            return self.app.change_stack(self.app.SELECT_CLASS_WIDGET)
-        self.app.select_user_role_widget.update_list()
+        self.app.select_user_role_widget.update_role_list()
         self.app.set_window_title("Vartotojo tipas")
         self.app.change_stack(self.app.SELECT_USER_ROLE_WIDGET)
 

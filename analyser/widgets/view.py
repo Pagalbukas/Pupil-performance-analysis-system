@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, List, Optional
 from analyser.graphing import (
     PupilPeriodicAttendanceGraph, PupilPeriodicAveragesGraph, PupilSubjectPeriodicAveragesGraph
 )
-from analyser.summaries import ClassPeriodReportSummary
+from analyser.summaries import ClassPeriodReportSummary, anonymize_pupil_names
 from analyser.qt_compat import QtWidgets
 
 logger = logging.getLogger("analizatorius")
@@ -41,6 +41,8 @@ class PeriodicViewTypeSelectorWidget(QtWidgets.QWidget):
         
     def _update_summary_list(self, summaries):
         self.summaries = summaries
+        if self.app.settings.hide_names:
+            self.summaries = anonymize_pupil_names(self.summaries)
         
     def on_shared_averages_button_click(self):
         self.app.display_period_pupil_averages_graph(self.summaries)
@@ -80,9 +82,11 @@ class GroupViewTypeSelectorWidget(QtWidgets.QWidget):
 
     def _update_summary_list(self, summaries):
         self.summaries = summaries
+        if self.app.settings.hide_names:
+            self.summaries = anonymize_pupil_names(self.summaries)
         
     def on_shared_averages_button_click(self):
-        self.app.display_group_pupil_marks_graph(self.summaries)
+        self.app.display_group_pupil_marks_graph(self.summaries[0])
     
     def on_shared_attendance_button_click(self):
         self.app.display_period_attendance_graph(self.summaries)
@@ -166,6 +170,8 @@ class PupilSelectionWidget(QtWidgets.QWidget):
     def update_data(self, summaries: List[ClassPeriodReportSummary]) -> None:
         """Updates widget data."""
         self.summaries = summaries
+        if self.app.settings.hide_names:
+            self.summaries = anonymize_pupil_names(self.summaries)
         self.name_list.clearSelection()
         self.name_list.clear()
         for i, name in enumerate([p.name for p in summaries[-1].pupils]):

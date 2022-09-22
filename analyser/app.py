@@ -6,19 +6,20 @@ import sys
 import logging
 
 from logging.handlers import RotatingFileHandler
-from typing import List, Optional, Tuple
+from typing import List
 
 from analyser.files import EXECUTABLE_PATH, get_home_dir, get_log_file
 from analyser.graphing import (
     MatplotlibWindow, UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph, UnifiedGroupAveragesGraph
 )
-from analyser.mano_dienynas.client import Client, UnifiedAveragesReportGenerator, Class # type: ignore
-from analyser.parsing import parse_periodic_summary_files
+from analyser.mano_dienynas.client import Client # type: ignore
 from analyser.settings import Settings
 from analyser.summaries import ClassPeriodReportSummary
-from analyser.qt_compat import QtWidgets, QtCore, QtGui, Qt
+from analyser.qt_compat import QtWidgets, QtGui
 from analyser.widgets.main import MainWidget
 from analyser.widgets.login import LoginWidget
+from analyser.widgets.role import SelectUserRoleWidget
+from analyser.widgets.selectors import ClassGeneratorWidget, GroupGeneratorWidget
 from analyser.widgets.settings import SettingsWidget
 from analyser.widgets.type_selector import ManualFileSelectorWidget
 from analyser.widgets.view import GroupViewTypeSelectorWidget, PeriodicViewTypeSelectorWidget, PupilSelectionWidget
@@ -45,284 +46,6 @@ if "__compiled__" not in dir():
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-class GenerateReportWorker(QtCore.QObject):
-    success = QtCore.Signal(list)
-    error = QtCore.Signal(str)
-    progress = QtCore.Signal(tuple)
-
-    def __init__(self, app: App, class_o: Class) -> None:
-        super().__init__()
-        self.app = app
-        self.class_o = class_o
-
-    @QtCore.Slot() # type: ignore
-    def generate_periodic(self):
-        try:
-            generator = self.app.client.get_class_averages_report_options(self.class_o.id)
-            total = generator.expected_period_report_count
-            self.progress.emit((total, 0))
-            files = []
-            for i, file in enumerate(generator.generate_periodic_reports()):
-                self.progress.emit((total, i + 1))
-                files.append(file)
-        except Exception as e:
-            logger.exception(e)
-            return self.error.emit(str(e))
-        self.success.emit(files)
-
-    @QtCore.Slot() # type: ignore
-    def generate_monthly(self):
-        try:
-            generator = self.app.client.get_class_averages_report_options(self.class_o.id)
-            total = generator.expected_monthly_report_count
-            self.progress.emit((total, 0))
-            files = []
-            for i, file in enumerate(generator.generate_monthly_reports()):
-                self.progress.emit((total, i + 1))
-                files.append(file)
-        except Exception as e:
-            logger.exception(e)
-            return self.error.emit(str(e))
-        self.success.emit(files)
-
-class ChangeRoleWorker(QtCore.QObject):
-    success = QtCore.Signal()
-    error = QtCore.Signal(str)
-
-    def __init__(self, app: App, role_index: int) -> None:
-        super().__init__()
-        self.app = app
-        self.index = role_index
-
-    @QtCore.Slot() # type: ignore
-    def change_role(self):
-        try:
-            self.app.client.get_filtered_user_roles()[self.index].change_role()
-        except Exception as e:
-            logger.exception(e)
-            return self.error.emit(str(e))
-        self.success.emit()
-
-class SelectUserRoleWidget(QtWidgets.QWidget):
-
-    def __init__(self, app: App) -> None:
-        super().__init__()
-        self.app = app
-        self.selected_index: Optional[int] = None
-
-        layout = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QLabel("Pasirinkite vartotojo tipą. Jis bus naudojamas nagrinėjamai klasei pasirinkti.")
-        self.role_list = QtWidgets.QListWidget()
-        self.select_button = QtWidgets.QPushButton('Pasirinkti')
-        self.back_button = QtWidgets.QPushButton('Atsijungti ir grįžti į pradžią')
-
-        self.role_list.itemSelectionChanged.connect(self.select_role)
-        self.select_button.clicked.connect(self.change_role)
-        self.back_button.clicked.connect(self.log_out_and_return)
-
-        layout.addWidget(label)
-        layout.addWidget(self.role_list)
-        layout.addWidget(self.select_button)
-        layout.addWidget(self.back_button)
-        self.setLayout(layout)
-
-    def log_out_and_return(self) -> None:
-        self.app.client.logout()
-        self.app.go_to_back()
-
-    def enable_gui(self) -> None:
-        """Enables GUI components."""
-        self.select_button.setEnabled(True)
-        self.back_button.setEnabled(True)
-
-    def disable_gui(self) -> None:
-        """Disables GUI components."""
-        self.select_button.setEnabled(False)
-        self.select_button.clearFocus()
-        self.back_button.setEnabled(False)
-
-    def propagate_error(self, error_msg: str) -> None:
-        """Display an error and re-enable the GUI."""
-        self.enable_gui()
-        self.app.show_error_box(error_msg)
-
-    def on_error_signal(self, error: str) -> None:
-        """Callback of ChangeRoleWorker thread on error."""
-        self.propagate_error(error)
-        self.worker_thread.quit()
-
-    def on_success_signal(self) -> None:
-        """Callback of ChangeRoleWorker thread on success."""
-        self.worker_thread.quit()
-        self.enable_gui()
-        self.app.select_class_widget.update_data()
-        self.app.change_stack(self.app.SELECT_CLASS_WIDGET)
-
-    def select_role(self) -> None:
-        # Not best practise, but bash me all you want
-        indexes = self.role_list.selectedIndexes()
-        if len(indexes) == 0:
-            return
-        index = indexes[0].row() # type: ignore
-        self.select_button.setEnabled(True)
-        self.selected_index = index
-
-    def update_list(self):
-        self.select_button.setEnabled(False)
-        self.role_list.clearSelection()
-        self.role_list.clear()
-        for i, role in enumerate(self.app.client.get_filtered_user_roles()):
-            self.role_list.insertItem(i, role.representable_name)
-
-    def change_role(self) -> None:
-        """Creates a change role worker."""
-        self.disable_gui()
-        assert self.selected_index is not None
-        self.worker = ChangeRoleWorker(self.app, self.selected_index)
-        self.worker_thread = QtCore.QThread()
-        self.worker.moveToThread(self.worker_thread)
-
-        # Connect signals
-        self.worker.error.connect(self.on_error_signal) # type: ignore
-        self.worker.success.connect(self.on_success_signal) # type: ignore
-        self.worker_thread.started.connect(self.worker.change_role)
-
-        self.worker_thread.start()
-
-
-class SelectClassWidget(QtWidgets.QWidget):
-
-    def __init__(self, app: App) -> None:
-        super().__init__()
-        self.app = app
-        self.selected_index: Optional[int] = None
-
-        layout = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QLabel("Pasirinkite nagrinėjamą klasę.")
-        self.class_list = QtWidgets.QListWidget()
-        self.classes: List[Class] = []
-        self.semester_button = QtWidgets.QPushButton('Generuoti trimestrų/pusmečių ataskaitas')
-        self.monthly_button = QtWidgets.QPushButton('Generuoti mėnesines ataskaitas')
-        self.back_button = QtWidgets.QPushButton('Grįžti į pradžią')
-        self.progress_dialog = None
-
-        self.class_list.itemSelectionChanged.connect(self.select_class)
-        self.semester_button.clicked.connect(self.generate_periodic_reports)
-        self.monthly_button.clicked.connect(self.generate_monthly_reports)
-        self.back_button.clicked.connect(self.app.go_to_back)
-
-        layout.addWidget(label)
-        layout.addWidget(self.class_list)
-        layout.addWidget(self.semester_button)
-        layout.addWidget(self.monthly_button)
-        layout.addWidget(self.back_button)
-        self.setLayout(layout)
-
-    def _create_progress_dialog(self):
-        self.progress_dialog = QtWidgets.QProgressDialog("Generuojamos ataskaitos", None, 0, 0, self)
-        self.progress_dialog.setWindowFlags(Qt.Window | Qt.MSWindowsFixedSizeDialogHint | Qt.CustomizeWindowHint)
-        self.progress_dialog.setModal(True)
-
-    def select_class(self) -> None:
-        indexes = self.class_list.selectedIndexes()
-        if len(indexes) == 0:
-            return
-        index = indexes[0].row() # type: ignore
-        self.semester_button.setEnabled(True)
-        self.monthly_button.setEnabled(True)
-        self.selected_index = index
-
-    def enable_gui(self) -> None:
-        """Enables GUI components."""
-        self.class_list.setEnabled(True)
-        self.semester_button.setEnabled(True)
-        self.monthly_button.setEnabled(True)
-        self.back_button.setEnabled(True)
-
-    def disable_gui(self) -> None:
-        """Disables GUI components."""
-        self.class_list.setEnabled(False)
-        self.semester_button.setEnabled(False)
-        self.semester_button.clearFocus()
-        self.monthly_button.setEnabled(False)
-        self.monthly_button.clearFocus()
-        self.back_button.setEnabled(False)
-
-    def propagate_error(self, error_msg: str) -> None:
-        """Display an error and re-enable the GUI."""
-        self.enable_gui()
-        self.app.show_error_box(error_msg)
-
-    def on_error_signal(self, error: str) -> None:
-        """Callback of GenerateReportWorker thread on error."""
-        self.propagate_error(error)
-        if self.progress_dialog:
-            self.progress_dialog.hide()
-        self.worker_thread.quit()
-
-    def on_progress_signal(self, data: Tuple[int, int]) -> None:
-        """Callback of GenerateReportWorker thread on success."""
-        total, curr = data
-
-        if self.progress_dialog is None:
-            self._create_progress_dialog()
-
-        assert self.progress_dialog is not None
-
-        if not self.progress_dialog.isVisible():
-            self.progress_dialog.show()
-        self.progress_dialog.setRange(0, total)
-        self.progress_dialog.setValue(curr)
-
-    def on_success_signal(self, file_paths: List[str]) -> None:
-        """Callback of GenerateReportWorker thread on success."""
-        if self.progress_dialog:
-            self.progress_dialog.hide()
-        self.worker_thread.quit()
-        
-        summaries = parse_periodic_summary_files(file_paths)
-        summaries.sort(key=lambda s: (s.term_start))
-        self.app.open_periodic_type_selector(summaries)
-        self.enable_gui()
-
-    def update_data(self) -> None:
-        self.enable_gui()
-        self.classes = self.app.client.get_class_averages_report_options() # type: ignore
-        if isinstance(self.classes, UnifiedAveragesReportGenerator):
-            return
-        self.semester_button.setEnabled(False)
-        self.monthly_button.setEnabled(False)
-        self.class_list.clearSelection()
-        self.class_list.clear()
-        for i, class_o in enumerate(self.classes):
-            self.class_list.insertItem(i, class_o.name)
-
-    def generate_periodic_reports(self) -> None:
-        """Starts GenerateReportWorker thread for periodic reports."""
-        self.disable_gui()
-        assert self.selected_index is not None
-        self.worker = GenerateReportWorker(self.app, self.classes[self.selected_index])
-        self.worker_thread = QtCore.QThread()
-        self.worker.moveToThread(self.worker_thread)
-        self.worker.error.connect(self.on_error_signal) # type: ignore
-        self.worker.success.connect(self.on_success_signal) # type: ignore
-        self.worker.progress.connect(self.on_progress_signal) # type: ignore
-        self.worker_thread.started.connect(self.worker.generate_periodic)
-        self.worker_thread.start()
-
-    def generate_monthly_reports(self) -> None:
-        """Starts GenerateReportWorker thread for monthly reports."""
-        self.disable_gui()
-        assert self.selected_index is not None
-        self.worker = GenerateReportWorker(self.app, self.classes[self.selected_index])
-        self.worker_thread = QtCore.QThread()
-        self.worker.moveToThread(self.worker_thread)
-        self.worker.error.connect(self.on_error_signal) # type: ignore
-        self.worker.success.connect(self.on_success_signal) # type: ignore
-        self.worker.progress.connect(self.on_progress_signal) # type: ignore
-        self.worker_thread.started.connect(self.worker.generate_monthly)
-        self.worker_thread.start()
-
 class Dummy(QtWidgets.QWidget):
     pass
 
@@ -339,6 +62,7 @@ class App(QtWidgets.QWidget):
     MANUAL_SELECTOR = 7
     PERIODIC_TYPE_SELECTOR = 8
     GROUP_TYPE_SELECTOR = 9
+    GROUP_GENERATOR = 10
 
     def __init__(self, settings: Settings):
         super().__init__()
@@ -379,17 +103,20 @@ class App(QtWidgets.QWidget):
         
         # Initialize file selection/generation widgets
         self.file_selector_widget = ManualFileSelectorWidget(self)
+        self.login_widget = LoginWidget(self)
         
         # Initialise selectors
         self.periodic_view_selector_widget = PeriodicViewTypeSelectorWidget(self)
         self.group_view_selector_widget = GroupViewTypeSelectorWidget(self)
+        
+        self.class_generator_widget = ClassGeneratorWidget(self)
+        self.group_generator_widget = GroupGeneratorWidget(self)
 
         # Initialize QWidgets
         dummy = Dummy()
         self.select_pupil_widget = PupilSelectionWidget(self)
-        self.login_widget = LoginWidget(self)
         self.select_user_role_widget = SelectUserRoleWidget(self)
-        self.select_class_widget = SelectClassWidget(self)
+        self.select_class_widget = ClassGeneratorWidget(self)
 
         # Add said widgets to the StackedWidget
         self.stack.addWidget(self.main_widget)
@@ -403,6 +130,7 @@ class App(QtWidgets.QWidget):
         self.stack.addWidget(self.file_selector_widget)
         self.stack.addWidget(self.periodic_view_selector_widget)
         self.stack.addWidget(self.group_view_selector_widget)
+        self.stack.addWidget(self.group_generator_widget)
 
         main_layout = QtWidgets.QVBoxLayout()
         main_layout.addWidget(self.stack)
@@ -431,8 +159,8 @@ class App(QtWidgets.QWidget):
     def display_period_attendance_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
         self._display_graph(UnifiedClassAttendanceGraph(self, summaries))
 
-    def display_group_pupil_marks_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
-        self._display_graph(UnifiedGroupAveragesGraph(self, summaries[0]))
+    def display_group_pupil_marks_graph(self, summary: ClassPeriodReportSummary) -> None:
+        self._display_graph(UnifiedGroupAveragesGraph(self, summary))
 
     def go_to_back(self) -> None:
         """Return to the main widget."""
@@ -460,6 +188,16 @@ class App(QtWidgets.QWidget):
         self.select_pupil_widget.update_data(summaries)
         self.set_window_title("Nagrinėjamas mokinys")
         self.change_stack(self.SELECT_PUPIL_WIDGET)
+
+    def open_class_selector(self):
+        self.select_class_widget.fetch_class_data()
+        self.set_window_title("Nagrinėjama klasė")
+        self.change_stack(self.SELECT_CLASS_WIDGET)
+    
+    def open_group_selector(self):
+        self.group_generator_widget.fetch_group_data()
+        self.set_window_title("Nagrinėjama grupė")
+        self.change_stack(self.GROUP_GENERATOR)
 
     def change_stack(self, index: int) -> None:
         """Change current stack widget."""
