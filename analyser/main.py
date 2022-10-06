@@ -11,4 +11,5 @@ if __name__ == "__main__":
     settings = Settings()
     app = QtWidgets.QApplication(sys.argv)
     ex = App(settings)
+    sys.excepthook = ex.excepthook
     sys.exit(app.exec_())

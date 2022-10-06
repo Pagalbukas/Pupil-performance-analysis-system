@@ -4,6 +4,7 @@ import os
 import platform
 import sys
 import logging
+import traceback
 
 from logging.handlers import RotatingFileHandler
 from typing import List
@@ -211,12 +212,16 @@ class App(QtWidgets.QWidget):
         self.move(geo.topLeft())
         self.show()
 
-    def show_error_box(self, message: str) -> None:
+    def _show_error_box(self, title: str, message: str) -> None:
         """Displays a native error dialog."""
         QtWidgets.QMessageBox.critical(
-            self, "Įvyko klaida", message,
+            self, title, message,
             QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.NoButton
         )
+
+    def show_error_box(self, message: str) -> None:
+        """Displays a native error dialog."""
+        self._show_error_box("Įvyko klaida", message)
 
     def ask_files_dialog(self, caption: str = "Pasirinkite Excel ataskaitų failus") -> List[str]:
         """Displays a file selection dialog for picking Excel files."""
@@ -236,3 +241,12 @@ class App(QtWidgets.QWidget):
             self.settings.last_dir = os.path.dirname(files[0])
             self.settings.save()
         return files
+    
+    def excepthook(self, exc_type, exc_value, exc_tb):
+        tb = "".join(traceback.format_exception(exc_type, exc_value, exc_tb)).strip()
+        logger.critical(tb)
+        self._show_error_box(
+            "Įvyko nenumatyta klaida",
+            f'{tb}\n\nPrograma savo darbo tęsti nebegali ir užsidarys.'
+        )
+        QtWidgets.QApplication.exit(1)
