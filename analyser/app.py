@@ -48,9 +48,6 @@ if "__compiled__" not in dir():
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-class Dummy(QtWidgets.QWidget):
-    pass
-
 class App(QtWidgets.QWidget):
 
     MAIN_WIDGET = 0
