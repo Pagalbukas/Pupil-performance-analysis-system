@@ -24,16 +24,13 @@ from matplotlib.backend_bases import PickEvent, NavigationToolbar2  # type: igno
 from matplotlib.backends.backend_qt import NavigationToolbar2QT  # type: ignore # noqa: E402
 from matplotlib.backends.backend_qtagg import FigureCanvas # type: ignore # noqa: E402
 # The modules exist, but for some reason, they are not picked up by Pylance
-from matplotlib.backends.qt_compat import (  # type: ignore # noqa: E402
-    QtWidgets, _getSaveFileName
-)
 from matplotlib.figure import Figure  # type: ignore # noqa: E402
 from matplotlib.legend_handler import HandlerLine2D  # type: ignore # noqa: E402
 from matplotlib.lines import Line2D  # type: ignore # noqa: E402
 from matplotlib.text import Annotation  # type: ignore # noqa: E402
 
 from analyser.graphing import BaseGraph
-from analyser.qt_compat import Qt
+from analyser.qt_compat import Qt, QtWidgets
 
 MONTH_NAMES = {
     1: "Sausis",
@@ -84,7 +81,7 @@ def save_figure(self, *args):
         filters.append(filter)
     filters = ';;'.join(filters)
 
-    fname, filter = _getSaveFileName(
+    fname, filter = QtWidgets.QFileDialog.getSaveFileName(
         self.canvas.parent(), "Pasirinkite failo vardą ir vietą, kur jį išsaugosite", start,
         filters, selectedFilter)
 
