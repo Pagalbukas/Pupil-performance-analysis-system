@@ -207,7 +207,7 @@ class UnifiedSubject:
 
         return genericized_name
 
-class UnifiedPupil:
+class ClassPupil:
 
     def __init__(self, name: str, subjects: List[UnifiedSubject], average: Mark, attendance: Attendance) -> None:
         self.name = name
@@ -216,7 +216,7 @@ class UnifiedPupil:
         self.attendance = attendance
 
     def __repr__(self) -> str:
-        return f'<UnifiedPupil name="{self.name}" average={self.average} subjects={len(self.subjects)}>'
+        return f'<ClassPupil name="{self.name}" average={self.average} subjects={len(self.subjects)}>'
 
     @property
     def sorted_subjects(self) -> List[UnifiedSubject]:
@@ -228,3 +228,32 @@ class UnifiedPupil:
         """Returns a reversed name of the student.
         Should begin with a name instead of surname."""
         return ' '.join(self.name.split(" ")[::-1])
+
+class GroupPupil:
+
+    def __init__(self, name: str, marks: List[Mark], average: Mark, attendance: Attendance) -> None:
+        self.name = name
+        self.marks = marks
+        self.average = average
+        self.attendance = attendance
+
+    def __repr__(self) -> str:
+        return f'<GroupPupil name="{self.name}" average={self.average} marks={len(self.marks)}>'
+
+    def get_marks_for_month(self, month: int) -> List[Mark]:
+        marks: List[Mark] = []
+        for mark in self.marks:
+            assert mark.date is not None
+            if mark.date.month == month:
+                marks.append(mark)
+        return marks
+
+    def get_valid_marks_for_month(self, month: int) -> List[Mark]:
+        return [m for m in self.get_marks_for_month(month) if m.clean is not None]
+
+    @property
+    def sane_name(self) -> str:
+        """Returns a reversed name of the student.
+        Should begin with a name instead of surname."""
+        return ' '.join(self.name.split(" ")[::-1])
+

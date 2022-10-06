@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 
-from analyser.models import UnifiedPupil
+from analyser.models import ClassPupil
 from analyser.parsing import PupilSemesterReportParser
 
 SEMESTER_FILE_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'test_data', 'semesters')
@@ -26,7 +26,7 @@ def generate_test_data() -> None:
     with open(COMPARISON_FILE_PATH, "w") as f:
         json.dump(data, f)
 
-def to_dict(pupil: UnifiedPupil) -> dict:
+def to_dict(pupil: ClassPupil) -> dict:
     """Returns pupil object as a dictionary."""
     return {
         "name": pupil.name,

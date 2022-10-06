@@ -51,12 +51,12 @@ class MainWidget(QtWidgets.QWidget):
 
     def on_manual_upload_button_click(self) -> None:
         self.app.set_window_title("Rankinis įkėlimas")
-        self.app.change_stack(self.app.MANUAL_SELECTOR)
+        self.app.change_stack(self.app.FILE_SELECTOR_WIDGET)
 
     def on_auto_upload_button_click(self) -> None:
         if self.app.client.is_logged_in:
             self.app.set_window_title("Vartotojo tipas")
-            return self.app.change_stack(self.app.SELECT_USER_ROLE_WIDGET)
+            return self.app.change_stack(self.app.ROLE_SELECTOR_WIDGET)
         
         self.app.login_widget.clear_fields()
         self.app.login_widget.fill_fields()

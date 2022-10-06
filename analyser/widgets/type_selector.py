@@ -5,7 +5,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from analyser.qt_compat import QtWidgets
-from analyser.parsing import parse_group_summary_files, parse_periodic_summary_files, parse_semester_summary_files
+from analyser.parsing import parse_group_summary_file, parse_periodic_summary_files, parse_semester_summary_files
 
 logger = logging.getLogger("analizatorius")
 
@@ -68,17 +68,14 @@ class ManualFileSelectorWidget(QtWidgets.QWidget):
         self.app.open_periodic_type_selector(summaries)
 
     def on_group_button_click(self) -> None:
-        files = self.app.ask_files_dialog()
-        if len(files) == 0:
+        file = self.app.ask_file_dialog()
+        if file is None:
             return
 
         # Generate summary objects from files
-        summaries = parse_group_summary_files(files)
-        if len(summaries) == 0:
+        summary = parse_group_summary_file(file)
+        if summary is None:
             return self.app.show_error_box("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
 
-        # Sort summaries by term start, ascending (YYYY-MM-DD)
-        summaries.sort(key=lambda s: (s.term_start))
-
         # Open type selection
-        self.app.open_group_type_selector(summaries)
+        self.app.open_group_type_selector(summary)

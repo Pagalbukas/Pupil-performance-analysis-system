@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import datetime
 import random
 
 from copy import deepcopy
-from typing import Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple, TypeVar, Union
 
-from analyser.models import UnifiedPupil
+from analyser.models import ClassPupil, GroupPupil
 
 ROMAN_VALUE_BINDINGS = {
     "I": 9,
@@ -13,18 +15,15 @@ ROMAN_VALUE_BINDINGS = {
     "IV": 12
 }
 
-class BaseClassReportSummary:
+AnySummary = TypeVar('AnySummary', 'ClassSemesterReportSummary', 'ClassPeriodReportSummary', 'GroupReportSummary')
+
+class BaseReportSummary:
 
     def __init__(
         self,
-        grade_name: str,
         period: Tuple[datetime.datetime, datetime.datetime],
-        pupils: List[UnifiedPupil]
+        pupils: Union[List[ClassPupil], List[GroupPupil]]
     ) -> None:
-        self.grade_name = grade_name
-        # For grades which are not gymnasium ones
-        if grade_name.isdigit():
-            self.grade_name = grade_name + " klasė"
         self.term_start, self.term_end = period
         self.pupils = pupils
 
@@ -32,15 +31,6 @@ class BaseClassReportSummary:
     def period(self) -> str:
         """Returns representation of summary period in years."""
         return f'{self.term_start.year}-{self.term_end.year}'
-
-    @property
-    def grade_name_as_int(self) -> int:
-        """Returns grade name representation as an integer."""
-        value = self.grade_name.split(" ")[0]
-        try:
-            return int(value)
-        except ValueError:
-            return ROMAN_VALUE_BINDINGS.get(value, -1)
 
     @property
     def representable_name(self) -> str:
@@ -52,32 +42,76 @@ class BaseClassReportSummary:
         """Returns a human representable name of the summary without the year."""
         return f'{self.term_start.strftime("%Y-%m-%d")} - {self.term_end.strftime("%Y-%m-%d")}'
 
-    @property
-    def students(self) -> List[UnifiedPupil]:
-        return self.pupils
+class GroupReportSummary(BaseReportSummary):
 
-class ClassPeriodReportSummary(BaseClassReportSummary):
+    if TYPE_CHECKING:
+        pupils: List[GroupPupil]
+
+    def __init__(
+        self,
+        group_name: str,
+        period: Tuple[datetime.datetime, datetime.datetime],
+        pupils: List[GroupPupil]
+    ) -> None:
+        self.group_name = group_name
+        super().__init__(period, pupils)
+
+    def __repr__(self) -> str:
+        return f'<GroupReportSummary period="{self.period}" pupils={len(self.pupils)}>'
+
+class ClassReportSummary(BaseReportSummary):
+
+    if TYPE_CHECKING:
+        pupils: List[ClassPupil]
 
     def __init__(
         self,
         grade_name: str,
         period: Tuple[datetime.datetime, datetime.datetime],
-        pupils: List[UnifiedPupil]
+        pupils: List[ClassPupil]
+    ) -> None:
+        self.grade_name = grade_name
+        # For grades which are not gymnasium ones
+        if grade_name.isdigit():
+            self.grade_name = grade_name + " klasė"
+        super().__init__(period, pupils)
+
+    @property
+    def grade_name_as_int(self) -> int:
+        """Returns grade name representation as an integer."""
+        value = self.grade_name.split(" ")[0]
+        try:
+            return int(value)
+        except ValueError:
+            return ROMAN_VALUE_BINDINGS.get(value, -1)
+
+class ClassPeriodReportSummary(ClassReportSummary):
+
+    if TYPE_CHECKING:
+        pupils: List[ClassPupil]
+
+    def __init__(
+        self,
+        grade_name: str,
+        period: Tuple[datetime.datetime, datetime.datetime],
+        pupils: List[ClassPupil]
     ) -> None:
         super().__init__(grade_name, period, pupils)
 
     def __repr__(self) -> str:
         return f'<ClassPeriodReportSummary period="{self.period}" pupils={len(self.pupils)}>'
 
+class ClassSemesterReportSummary(ClassReportSummary):
 
-class ClassSemesterReportSummary(BaseClassReportSummary):
+    if TYPE_CHECKING:
+        pupils: List[ClassPupil]
 
     def __init__(
         self,
         grade_name: str,
         type: str,
         period: Tuple[datetime.datetime, datetime.datetime],
-        pupils: List[UnifiedPupil]
+        pupils: List[ClassPupil]
     ) -> None:
         super().__init__(grade_name, period, pupils)
         self.type = type
@@ -114,11 +148,12 @@ class ClassSemesterReportSummary(BaseClassReportSummary):
         """Returns a human representable name of the summary."""
         return f"{self.grade_name_as_int} kl.\n{self.period_name}\n({self.period})"
 
-def anonymize_pupil_names(summaries: List[ClassSemesterReportSummary]) -> None:
-    """Anonymizes the names of pupils in the graph."""
+
+def anonymize_pupil_names(summaries: List[AnySummary]) -> List[AnySummary]:
+    """Anonymizes the names of pupils in the specified summary list."""
     summaries = deepcopy(summaries)
 
-    cached_combinations = []
+    cached_combinations: List[str] = []
     def generate_unique_name(cached_combinations: List[str]) -> str:
         names = ["Antanas", "Bernardas", "Cezis", "Dainius", "Ernestas", "Henrikas", "Jonas", "Petras", "Tilius"]
         surnames = ["Antanivičius", "Petraitis", "Brazdžionis", "Katiliškis", "Mickevičius", "Juozevičius", "Eilėraštinis"]

@@ -131,9 +131,9 @@ class LoginWidget(QtWidgets.QWidget):
         """Callback of LoginTaskWorker thread on success."""
         self.login_thread.quit()
         self.enable_gui()
-        self.app.select_user_role_widget.update_role_list()
+        self.app.role_selector_widget.update_role_list()
         self.app.set_window_title("Vartotojo tipas")
-        self.app.change_stack(self.app.SELECT_USER_ROLE_WIDGET)
+        self.app.change_stack(self.app.ROLE_SELECTOR_WIDGET)
 
     def login(self) -> None:
         """Attempt to log into Mano Dienynas.

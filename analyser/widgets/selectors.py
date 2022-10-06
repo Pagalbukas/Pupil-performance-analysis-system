@@ -5,7 +5,7 @@ import logging
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from analyser.mano_dienynas.client import Group, Class # type: ignore
-from analyser.parsing import parse_group_summary_files, parse_periodic_summary_files
+from analyser.parsing import parse_group_summary_file, parse_periodic_summary_files
 from analyser.qt_compat import QtWidgets, QtCore, Qt
 
 logger = logging.getLogger("analizatorius")
@@ -68,8 +68,8 @@ class FetchClassesWorker(QtCore.QObject):
             assert isinstance(classes, list)
         except Exception as e:
             logger.exception(e)
-            return self.error.emit(str(e))
-        self.success.emit(classes)
+            return self.error.emit(str(e)) # type: ignore
+        self.success.emit(classes) # type: ignore
 
 class FetchGroupsWorker(QtCore.QObject):
     success = QtCore.Signal(list)
@@ -85,8 +85,8 @@ class FetchGroupsWorker(QtCore.QObject):
             groups = self.app.client.fetch_user_groups() # type: ignore
         except Exception as e:
             logger.exception(e)
-            return self.error.emit(str(e))
-        self.success.emit(groups)
+            return self.error.emit(str(e)) # type: ignore
+        self.success.emit(groups) # type: ignore
 
 class GenerateGroupReportWorker(QtCore.QObject):
     success = QtCore.Signal(list)
@@ -125,7 +125,7 @@ class GroupGeneratorWidget(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout()
         label = QtWidgets.QLabel("Pasirinkite nagrinėjamą grupę.")
         self.group_list = QtWidgets.QListWidget()
-        self.groups: List[Class] = []
+        self.groups: List[Group] = []
         self.generate_button = QtWidgets.QPushButton("Generuoti ataskaitą")
         self.back_button = QtWidgets.QPushButton('Grįžti į pradžią')
         self.progress_dialog = None
@@ -221,9 +221,8 @@ class GroupGeneratorWidget(QtWidgets.QWidget):
             self.progress_dialog.hide()
         self.worker_thread.quit()
         
-        summaries = parse_group_summary_files(file_paths)
-        summaries.sort(key=lambda s: (s.term_start))
-        self.app.open_group_type_selector(summaries)
+        summary = parse_group_summary_file(file_paths[0])
+        self.app.open_group_type_selector(summary)
         self.enable_gui()
 
     def generate_report(self) -> None:

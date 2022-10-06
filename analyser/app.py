@@ -7,25 +7,26 @@ import logging
 import traceback
 
 from logging.handlers import RotatingFileHandler
-from typing import List
+from typing import List, Optional
 
 from analyser.files import EXECUTABLE_PATH, get_home_dir, get_log_file
 from analyser.graphing import (
-    MatplotlibWindow, UnifiedClassAveragesGraph, UnifiedClassAttendanceGraph, UnifiedGroupAveragesGraph
+    AnyGraph, ClassAttendanceGraph, ClassAveragesGraph, GroupAveragesGraph
 )
 from analyser.mano_dienynas.client import Client # type: ignore
 from analyser.settings import Settings
-from analyser.summaries import ClassPeriodReportSummary
+from analyser.summaries import ClassPeriodReportSummary, GroupReportSummary
 from analyser.qt_compat import QtWidgets, QtGui
+from analyser.widgets.graph import MatplotlibWindow
 from analyser.widgets.main import MainWidget
 from analyser.widgets.login import LoginWidget
 from analyser.widgets.role import SelectUserRoleWidget
 from analyser.widgets.selectors import ClassGeneratorWidget, GroupGeneratorWidget
 from analyser.widgets.settings import SettingsWidget
 from analyser.widgets.type_selector import ManualFileSelectorWidget
-from analyser.widgets.view import GroupViewTypeSelectorWidget, PeriodicViewTypeSelectorWidget, PupilSelectionWidget
+from analyser.widgets.view import GroupPupilSelectionWidget, GroupViewTypeSelectorWidget, PeriodicViewTypeSelectorWidget, ClassPupilSelectionWidget
 
-__VERSION__ = (1, 3, 0, 2)
+__VERSION__ = (1, 4, 0, 0)
 __VERSION_NAME__ = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}.{__VERSION__[3]}"
 REPO_URL = "https://mokytojams.svetikas.lt/"
 
@@ -53,17 +54,16 @@ class Dummy(QtWidgets.QWidget):
 class App(QtWidgets.QWidget):
 
     MAIN_WIDGET = 0
-    DUMMY = 1
-    SELECT_PUPIL_WIDGET = 2
+    SETTINGS_WIDGET = 1
+    FILE_SELECTOR_WIDGET = 2
     LOGIN_WIDGET = 3
-    SELECT_USER_ROLE_WIDGET = 4
-    SELECT_CLASS_WIDGET = 5
-    SETTINGS_WIDGET = 6
-
-    MANUAL_SELECTOR = 7
-    PERIODIC_TYPE_SELECTOR = 8
-    GROUP_TYPE_SELECTOR = 9
-    GROUP_GENERATOR = 10
+    ROLE_SELECTOR_WIDGET = 4
+    PERIODIC_TYPE_SELECTOR = 5
+    GROUP_TYPE_SELECTOR = 6
+    CLASS_GENERATOR = 7
+    GROUP_GENERATOR = 8
+    CLASS_PUPIL_SELECTOR = 9
+    GROUP_PUPIL_SELECTOR = 10
 
     def __init__(self, settings: Settings):
         super().__init__()
@@ -105,33 +105,28 @@ class App(QtWidgets.QWidget):
         # Initialize file selection/generation widgets
         self.file_selector_widget = ManualFileSelectorWidget(self)
         self.login_widget = LoginWidget(self)
+        self.role_selector_widget = SelectUserRoleWidget(self)
         
-        # Initialise selectors
+        # Initialise selectors and generators
         self.periodic_view_selector_widget = PeriodicViewTypeSelectorWidget(self)
         self.group_view_selector_widget = GroupViewTypeSelectorWidget(self)
-        
         self.class_generator_widget = ClassGeneratorWidget(self)
         self.group_generator_widget = GroupGeneratorWidget(self)
-
-        # Initialize QWidgets
-        dummy = Dummy()
-        self.select_pupil_widget = PupilSelectionWidget(self)
-        self.select_user_role_widget = SelectUserRoleWidget(self)
-        self.select_class_widget = ClassGeneratorWidget(self)
+        self.class_pupil_selector_widget = ClassPupilSelectionWidget(self)
+        self.group_pupil_selector_widget = GroupPupilSelectionWidget(self)
 
         # Add said widgets to the StackedWidget
         self.stack.addWidget(self.main_widget)
-        self.stack.addWidget(dummy)
-        self.stack.addWidget(self.select_pupil_widget)
-        self.stack.addWidget(self.login_widget)
-        self.stack.addWidget(self.select_user_role_widget)
-        self.stack.addWidget(self.select_class_widget)
         self.stack.addWidget(self.settings_widget)
-        
         self.stack.addWidget(self.file_selector_widget)
+        self.stack.addWidget(self.login_widget)
+        self.stack.addWidget(self.role_selector_widget)
         self.stack.addWidget(self.periodic_view_selector_widget)
         self.stack.addWidget(self.group_view_selector_widget)
+        self.stack.addWidget(self.class_generator_widget)
         self.stack.addWidget(self.group_generator_widget)
+        self.stack.addWidget(self.class_pupil_selector_widget)
+        self.stack.addWidget(self.group_pupil_selector_widget)
 
         main_layout = QtWidgets.QVBoxLayout()
         main_layout.addWidget(self.stack)
@@ -144,7 +139,7 @@ class App(QtWidgets.QWidget):
             return self.setWindowTitle(f'Mokinių pasiekimų ir lankomumo stebėsenos sistema')
         self.setWindowTitle(f'Mokinių pasiekimų ir lankomumo stebėsenos sistema | {section}')
 
-    def _display_graph(self, graph: UnifiedClassAveragesGraph):
+    def _display_graph(self, graph: AnyGraph):
         try:
             graph.display()
         except Exception as e:
@@ -152,16 +147,16 @@ class App(QtWidgets.QWidget):
             return self.show_error_box(str(e))
         
     def display_semester_pupil_averages_graph(self, summaries):
-        self._display_graph(UnifiedClassAveragesGraph(self, summaries))
+        self._display_graph(ClassAveragesGraph(self, summaries))
 
     def display_period_pupil_averages_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
-        self._display_graph(UnifiedClassAveragesGraph(self, summaries))
+        self._display_graph(ClassAveragesGraph(self, summaries))
 
     def display_period_attendance_graph(self, summaries: List[ClassPeriodReportSummary]) -> None:
-        self._display_graph(UnifiedClassAttendanceGraph(self, summaries))
+        self._display_graph(ClassAttendanceGraph(self, summaries))
 
-    def display_group_pupil_marks_graph(self, summary: ClassPeriodReportSummary) -> None:
-        self._display_graph(UnifiedGroupAveragesGraph(self, summary))
+    def display_group_pupil_marks_graph(self, summary: GroupReportSummary) -> None:
+        self._display_graph(GroupAveragesGraph(self, summary))
 
     def go_to_back(self) -> None:
         """Return to the main widget."""
@@ -173,27 +168,27 @@ class App(QtWidgets.QWidget):
         self.set_window_title("Klasės grafiko tipas")
         self.change_stack(self.PERIODIC_TYPE_SELECTOR)
 
-    def open_group_type_selector(self, summaries):
-        self.group_view_selector_widget._update_summary_list(summaries)
+    def open_group_type_selector(self, summary: GroupReportSummary):
+        self.group_view_selector_widget._update_summary_list(summary)
         self.set_window_title("Grupės grafiko tipas")
         self.change_stack(self.GROUP_TYPE_SELECTOR)
         
     def open_individual_period_pupil_graph_selector(self, summaries):
-        self.select_pupil_widget.disable_buttons()
-        self.select_pupil_widget.update_data(summaries)
+        self.class_pupil_selector_widget.disable_buttons()
+        self.class_pupil_selector_widget.update_data(summaries)
         self.set_window_title("Nagrinėjamas mokinys")
-        self.change_stack(self.SELECT_PUPIL_WIDGET)
+        self.change_stack(self.CLASS_PUPIL_SELECTOR)
     
-    def open_individual_group_pupil_graph_selector(self, summaries):
-        self.select_pupil_widget.disable_buttons()
-        self.select_pupil_widget.update_data(summaries)
+    def open_individual_group_pupil_graph_selector(self, summary: GroupReportSummary):
+        self.group_pupil_selector_widget.disable_buttons()
+        self.group_pupil_selector_widget.update_data(summary)
         self.set_window_title("Nagrinėjamas mokinys")
-        self.change_stack(self.SELECT_PUPIL_WIDGET)
+        self.change_stack(self.GROUP_PUPIL_SELECTOR)
 
     def open_class_selector(self):
-        self.select_class_widget.fetch_class_data()
+        self.class_generator_widget.fetch_class_data()
         self.set_window_title("Nagrinėjama klasė")
-        self.change_stack(self.SELECT_CLASS_WIDGET)
+        self.change_stack(self.CLASS_GENERATOR)
     
     def open_group_selector(self):
         self.group_generator_widget.fetch_group_data()
@@ -241,6 +236,27 @@ class App(QtWidgets.QWidget):
             self.settings.last_dir = os.path.dirname(files[0])
             self.settings.save()
         return files
+    
+    def ask_file_dialog(self, caption: str = "Pasirinkite Excel ataskaitos failą") -> Optional[str]:
+        """Displays a file selection dialog for picking an Excel file."""
+        directory = self.settings.last_dir
+        if directory is None or not os.path.exists(directory):
+            directory = os.path.join(get_home_dir(), "Downloads")
+
+        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            caption,
+            directory,
+            "Excel ataskaitos failas (*.xlsx *.xls)"
+        )
+
+        # Store the last dir in the settings
+        if file_name == '':
+            return None
+
+        self.settings.last_dir = os.path.dirname(file_name)
+        self.settings.save()
+        return file_name
     
     def excepthook(self, exc_type, exc_value, exc_tb):
         tb = "".join(traceback.format_exception(exc_type, exc_value, exc_tb)).strip()
