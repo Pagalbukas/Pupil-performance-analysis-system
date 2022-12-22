@@ -21,9 +21,10 @@ jobs:
           --assume-yes-for-downloads
           --enable-plugin=pyside6
           --include-qt-plugins=sensible,styles
-          --enable-plugin=numpy
-          --noinclude-scipy
+          --nofollow-import-to=scipy
           --nofollow-import-to=PySide6.QtNetwork
+          --nofollow-import-to=PySide6.QtQml
+          --nofollow-import-to=tkinter
           --include-module=matplotlib.backends.backend_pdf
           --include-module=matplotlib.backends.backend_qtagg
           --windows-icon-from-ico=icon.ico
