@@ -4,7 +4,10 @@ def test_raw_int_mark():
     assert Mark(1).clean == 1
 
 def test_raw_int_0_mark():
-    assert Mark(0).clean == 0 # TODO: change intended behaviour from 0 to None
+    assert Mark(0).clean is None
+
+def test_raw_float_0_mark():
+    assert Mark(0.0).clean is None
 
 def test_raw_float_mark():
     assert Mark(1.1).clean == 1.1
@@ -50,6 +53,9 @@ def test_raw_string_special_program_not_passed_mark2():
 
 def test_raw_string_0_mark():
     assert Mark("0").clean is None
+
+def test_raw_string_0point0_mark():
+    assert Mark("0.0").clean is None
 
 def test_raw_string_special_program_0_mark1():
     assert Mark("0IN").clean is None

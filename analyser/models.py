@@ -1,4 +1,5 @@
 from __future__ import annotations
+import datetime
 
 import logging
 
@@ -76,8 +77,9 @@ COMMON_GENERIC_NAMES = {
 
 class Mark:
 
-    def __init__(self, raw_value: Optional[Union[int, float, str]]) -> None:
+    def __init__(self, raw_value: Optional[Union[int, float, str]], date: Optional[datetime.datetime] = None) -> None:
         self.raw_value = raw_value
+        self.date = date
 
     def __repr__(self) -> str:
         return f'<Mark raw="{self.raw_value}">'
@@ -98,6 +100,8 @@ class Mark:
             return None
 
         if isinstance(self.raw_value, (int, float)):
+            if self.raw_value == 0 or self.raw_value == 0.0:
+                return None
             return self.raw_value
 
         if self.raw_value == "-":
@@ -108,6 +112,15 @@ class Mark:
             return False
         if self.raw_value == "atl":
             return None
+        
+        # Absence mark
+        if self.raw_value == "n":
+            return None
+        if self.raw_value == "nk":
+            return None
+        if self.raw_value == "nl":
+            return None
+        
         if self.raw_value.endswith("val.") or self.raw_value.endswith("val"):
             return None
 
@@ -121,6 +134,8 @@ class Mark:
             if new_mark == "atl":
                 return None
             if new_mark == "0":
+                return None
+            if new_mark == "0.0":
                 return None
             if new_mark.isdecimal():
                 return float(new_mark)
@@ -196,7 +211,7 @@ class UnifiedSubject:
 
         return genericized_name
 
-class UnifiedPupil:
+class ClassPupil:
 
     def __init__(self, name: str, subjects: List[UnifiedSubject], average: Mark, attendance: Attendance) -> None:
         self.name = name
@@ -205,7 +220,7 @@ class UnifiedPupil:
         self.attendance = attendance
 
     def __repr__(self) -> str:
-        return f'<UnifiedPupil name="{self.name}" average={self.average} subjects={len(self.subjects)}>'
+        return f'<ClassPupil name="{self.name}" average={self.average} subjects={len(self.subjects)}>'
 
     @property
     def sorted_subjects(self) -> List[UnifiedSubject]:
@@ -217,3 +232,32 @@ class UnifiedPupil:
         """Returns a reversed name of the student.
         Should begin with a name instead of surname."""
         return ' '.join(self.name.split(" ")[::-1])
+
+class GroupPupil:
+
+    def __init__(self, name: str, marks: List[Mark], average: Mark, attendance: Attendance) -> None:
+        self.name = name
+        self.marks = marks
+        self.average = average
+        self.attendance = attendance
+
+    def __repr__(self) -> str:
+        return f'<GroupPupil name="{self.name}" average={self.average} marks={len(self.marks)}>'
+
+    def get_marks_for_month(self, month: int) -> List[Mark]:
+        marks: List[Mark] = []
+        for mark in self.marks:
+            assert mark.date is not None
+            if mark.date.month == month:
+                marks.append(mark)
+        return marks
+
+    def get_valid_marks_for_month(self, month: int) -> List[Mark]:
+        return [m for m in self.get_marks_for_month(month) if m.clean is not None]
+
+    @property
+    def sane_name(self) -> str:
+        """Returns a reversed name of the student.
+        Should begin with a name instead of surname."""
+        return ' '.join(self.name.split(" ")[::-1])
+

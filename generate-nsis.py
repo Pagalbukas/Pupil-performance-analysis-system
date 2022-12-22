@@ -5,7 +5,7 @@ from typing import List
 DEFINITIONS = {
     "APP_NAME": "Mokinių pasiekimų ir lankomumo stebėsenos sistema",
     "COMP_NAME": "Dominykas Svetikas",
-    "VERSION": "1.2.1.0",
+    "VERSION": "1.4.0.0",
     "COPYRIGHT": "Dominykas Svetikas © 2022",
     "DESCRIPTION": "Application",
     "INSTALLER_NAME": "Analizatorius.exe",
@@ -67,7 +67,7 @@ class NSIScript:
             'Page Custom PrompUninstallPage\n'
             'Function PrompUninstallPage\n'
             'IfFileExists "$INSTDIR\\uninstall.exe" 0 +4\n'
-            'MessageBox MB_OK "Prieš diegiant programą, pašalinkite jau esamą programos versiją ir paleiskite įdiegimo programą vėl."\n'
+            'MessageBox MB_OK "Prieš diegiant programą, pašalinkite jau esamą programos versiją ir vėl paleiskite įdiegimo programą."\n'
             'ExecWait "$INSTDIR\\uninstall.exe"\n'
             'Quit\n'
             'FunctionEnd\n'
@@ -107,15 +107,15 @@ class NSIScript:
             '!ifdef REG_START_MENU\n'
             '!insertmacro MUI_STARTMENU_WRITE_BEGIN Application\n'
             'CreateDirectory "$SMPROGRAMS\\$SM_Folder"\n'
-            'CreateShortCut "$SMPROGRAMS\\$SM_Folder\${APP_NAME}.lnk" "$INSTDIR\\${MAIN_APP_EXE}"\n'
-            'CreateShortCut "$DESKTOP\\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"\n'
+            'CreateShortCut "$SMPROGRAMS\\$SM_Folder\\${APP_NAME}.lnk" "$INSTDIR\\${MAIN_APP_EXE}"\n'
+            'CreateShortCut "$DESKTOP\\${APP_NAME}.lnk" "$INSTDIR\\${MAIN_APP_EXE}"\n'
             'CreateShortCut "$SMPROGRAMS\\$SM_Folder\\Uninstall ${APP_NAME}.lnk" "$INSTDIR\\uninstall.exe"\n'
             '!insertmacro MUI_STARTMENU_WRITE_END\n'
             '!endif\n'
 
             '!ifndef REG_START_MENU\n'
             'CreateDirectory "$SMPROGRAMS\\${APP_NAME}"\n'
-            'CreateShortCut "$SMPROGRAMS\\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\\${MAIN_APP_EXE}"\n'
+            'CreateShortCut "$SMPROGRAMS\\${APP_NAME}\\${APP_NAME}.lnk" "$INSTDIR\\${MAIN_APP_EXE}"\n'
             'CreateShortCut "$DESKTOP\\${APP_NAME}.lnk" "$INSTDIR\\${MAIN_APP_EXE}"\n'
             'CreateShortCut "$SMPROGRAMS\\${APP_NAME}\\Uninstall ${APP_NAME}.lnk" "$INSTDIR\\uninstall.exe"\n'
             '!endif\n'
