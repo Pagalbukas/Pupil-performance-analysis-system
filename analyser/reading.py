@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Union
 from typing_extensions import TypeAlias
 
 xlrdSheet: TypeAlias = xlrd.sheet.Sheet
-openpyxlSheet: TypeAlias = openpyxl.worksheet._read_only.ReadOnlyWorksheet
+openpyxlSheet: TypeAlias = openpyxl.worksheet._read_only.ReadOnlyWorksheet # type: ignore
 
 class UnifiedSheet:
     """A class which implements a unified Sheet object."""
@@ -63,7 +63,7 @@ class SpreadsheetReader:
     def close(self) -> None:
         """Closes the reader."""
         if self.sheet.xlrd:
-            self._doc.release_resources()
+            self._doc.release_resources() # type: ignore
         else:
             if hasattr(self, "_f"):
                 self._f.close()

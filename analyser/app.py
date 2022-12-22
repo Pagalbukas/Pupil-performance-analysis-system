@@ -48,7 +48,7 @@ if "__compiled__" not in dir():
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-class App(QtWidgets.QWidget):
+class App(QtWidgets.QWidget): # type: ignore
 
     MAIN_WIDGET = 0
     SETTINGS_WIDGET = 1

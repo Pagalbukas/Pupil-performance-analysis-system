@@ -13,7 +13,7 @@ logger = logging.getLogger("analizatorius")
 if TYPE_CHECKING:
     from analyser.app import App
 
-class ManualFileSelectorWidget(QtWidgets.QWidget):
+class ManualFileSelectorWidget(QtWidgets.QWidget): # type: ignore
 
     def __init__(self, app: App) -> None:
         super().__init__()
@@ -25,10 +25,10 @@ class ManualFileSelectorWidget(QtWidgets.QWidget):
         group_button = QtWidgets.QPushButton('Grupių ataskaitos (mokytojams)')
         return_button = QtWidgets.QPushButton('Grįžti į pradžią')
 
-        semester_button.clicked.connect(self.on_semester_button_click)
-        period_button.clicked.connect(self.on_period_button_click)
-        group_button.clicked.connect(self.on_group_button_click)
-        return_button.clicked.connect(self.app.go_to_back)
+        semester_button.clicked.connect(self.on_semester_button_click) # type: ignore
+        period_button.clicked.connect(self.on_period_button_click) # type: ignore
+        group_button.clicked.connect(self.on_group_button_click) # type: ignore
+        return_button.clicked.connect(self.app.go_to_back) # type: ignore
 
         layout.addWidget(semester_button) # type: ignore
         layout.addWidget(period_button) # type: ignore

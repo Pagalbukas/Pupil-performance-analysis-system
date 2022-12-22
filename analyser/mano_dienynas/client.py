@@ -168,7 +168,7 @@ class Client:
         self,
         method: str,
         url: str,
-        data: dict = None,
+        data: Optional[dict] = None,
         no_cookies: bool = False,
         timeout: Optional[int] = 30
     ) -> Response:
@@ -244,9 +244,9 @@ class Client:
         """Returns a list of groups for the currently active user role."""
         r = self.request("GET", self.BASE_URL + "/1/lt/page/report/choose_normal/81")
         tree: _ElementTree = etree.parse(StringIO(r.text), PARSER)
-        form: ElementBase = tree.find("//form[@name='reportNormalForm']")
+        form: ElementBase = tree.find("//form[@name='reportNormalForm']") # type: ignore
         groups = []
-        group_select_elem: ElementBase = form.find(".//select[@id='GroupNormal']")
+        group_select_elem: ElementBase = form.find(".//select[@id='GroupNormal']") # type: ignore
         for opt in group_select_elem.getchildren():
             assert isinstance(opt, etree._Element)
             value = opt.attrib["value"]
@@ -258,7 +258,7 @@ class Client:
     def fetch_group_report_options(self, group_id: str) -> GroupReportGenerator:
         r = self.request("GET", self.BASE_URL + f"/1/lt/page/report/choose_normal/81/{group_id}")
         tree: _ElementTree = etree.parse(StringIO(r.text), PARSER)
-        form: ElementBase = tree.find("//form[@name='reportNormalForm']")
+        form: ElementBase = tree.find("//form[@name='reportNormalForm']") # type: ignore
         date_quick_select_elems: List[ElementBase] = form.xpath(".//a[@class='termDateSetter whiteButton']")
         if len(date_quick_select_elems) % 2 != 0:
             raise ClientError("Neįmanoma automatiškai nustatyti trimestrų/pusmečių laikotarpių!")
@@ -272,7 +272,7 @@ class Client:
             new_dates.append((dates[:half][i], dates[half:][i]))
         return GroupReportGenerator(self, group_id, new_dates)
 
-    def get_class_averages_report_options(self, class_id: str = None) -> Union[ClassAveragesReportGenerator, List[Class]]:
+    def get_class_averages_report_options(self, class_id: Optional[str] = None) -> Union[ClassAveragesReportGenerator, List[Class]]:
         """Returns response for selecting monthly averages report."""
         if class_id is None:
             r = self.request("GET", self.BASE_URL + "/1/lt/page/report/choose_normal/12")
@@ -280,7 +280,7 @@ class Client:
             r = self.request("GET", self.BASE_URL + "/1/lt/page/report/choose_normal/12/" + class_id)
 
         tree: _ElementTree = etree.parse(StringIO(r.text), PARSER)
-        form: ElementBase = tree.find("//form[@name='reportNormalForm']")
+        form: ElementBase = tree.find("//form[@name='reportNormalForm']") # type: ignore
 
         # If class ID was specified, provide unified interface for downloading either monthly or semester
         if class_id is not None:
@@ -300,7 +300,7 @@ class Client:
 
         # Otherwise, return a list of Class classes for selection
         classes = []
-        class_select_elem: ElementBase = form.find(".//select[@id='ClassNormal']")
+        class_select_elem: ElementBase = form.find(".//select[@id='ClassNormal']") # type: ignore
         for opt in class_select_elem.getchildren():
             assert isinstance(opt, etree._Element)
             value = opt.attrib["value"]

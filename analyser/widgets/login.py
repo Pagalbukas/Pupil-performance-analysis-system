@@ -11,7 +11,7 @@ logger = logging.getLogger("analizatorius")
 if TYPE_CHECKING:
     from analyser.app import App
 
-class LoginTaskWorker(QtCore.QObject):
+class LoginTaskWorker(QtCore.QObject): # type: ignore
     success = QtCore.Signal()
     error = QtCore.Signal(str)
 
@@ -25,17 +25,17 @@ class LoginTaskWorker(QtCore.QObject):
     def login(self):
         # Should never be called
         if self.app.client.is_logged_in:
-            return self.error.emit("Vartotojas jau prisijungęs, pala, ką?")
+            return self.error.emit("Vartotojas jau prisijungęs, pala, ką?") # type: ignore
 
         # Do the actual login request
         try:
             logged_in = self.app.client.login(self.username, self.password)
         except Exception as e:
             logger.exception(e)
-            return self.error.emit(str(e))
+            return self.error.emit(str(e)) # type: ignore
 
         if not logged_in:
-            return self.error.emit("Prisijungimas nepavyko, patikrinkite, ar duomenys suvesti teisingai!")
+            return self.error.emit("Prisijungimas nepavyko, patikrinkite, ar duomenys suvesti teisingai!") # type: ignore
 
         # Save the username since login was successful
         self.app.settings.username = self.username
@@ -46,17 +46,17 @@ class LoginTaskWorker(QtCore.QObject):
             roles = self.app.client.get_filtered_user_roles()
         except Exception as e:
             logger.exception(e)
-            return self.error.emit(str(e))
+            return self.error.emit(str(e)) # type: ignore
 
         if len(roles) == 0:
             self.app.client.logout()
-            return self.error.emit(
+            return self.error.emit( # type: ignore
                 "Paskyra neturi reikiamų vartotojo teisių. "
                 "Palaikomos tik paskyros su 'Klasės vadovas', 'Mokytojas' ir 'Sistemos administratorius' tipais."
             )
-        self.success.emit()
+        self.success.emit() # type: ignore
 
-class LoginWidget(QtWidgets.QWidget):
+class LoginWidget(QtWidgets.QWidget): # type: ignore
 
     def __init__(self, app: App) -> None:
         super().__init__()
@@ -75,8 +75,8 @@ class LoginWidget(QtWidgets.QWidget):
         self.login_button = QtWidgets.QPushButton('Prisijungti')
         self.back_button = QtWidgets.QPushButton('Grįžti į pradžią')
 
-        self.login_button.clicked.connect(self.login)
-        self.back_button.clicked.connect(self.app.go_to_back)
+        self.login_button.clicked.connect(self.login) # type: ignore
+        self.back_button.clicked.connect(self.app.go_to_back) # type: ignore
 
         layout.addWidget(label)
         layout.addWidget(self.username_field)
@@ -153,6 +153,6 @@ class LoginWidget(QtWidgets.QWidget):
         # Connect signals
         self.login_worker.error.connect(self.on_error_signal) # type: ignore
         self.login_worker.success.connect(self.on_success_signal) # type: ignore
-        self.login_thread.started.connect(self.login_worker.login)
+        self.login_thread.started.connect(self.login_worker.login) # type: ignore
 
         self.login_thread.start()
