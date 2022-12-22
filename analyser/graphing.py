@@ -386,10 +386,10 @@ class ClassPupilSubjectGraph(ClassPupilGraph):
             pupil = [p for p in summary.pupils if p.name == pupil_name][0]
             for subject in pupil.sorted_subjects:
                 if not subject.is_ignored:
-                    if subjects.get(pupil_name) is None:
-                        subjects[pupil_name] = [None for _ in range(len(period_names))]
-                    subjects[pupil_name][i] = subject.mark.clean
-        
+                    if subjects.get(subject.name) is None:
+                        subjects[subject.name] = [None for _ in range(len(period_names))]
+                    subjects[subject.name][i] = subject.mark.clean
+
         values = []
         for name in subjects:
             marks = subjects[name]

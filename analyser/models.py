@@ -100,6 +100,8 @@ class Mark:
             return None
 
         if isinstance(self.raw_value, (int, float)):
+            if self.raw_value == 0 or self.raw_value == 0.0:
+                return None
             return self.raw_value
 
         if self.raw_value == "-":
@@ -132,6 +134,8 @@ class Mark:
             if new_mark == "atl":
                 return None
             if new_mark == "0":
+                return None
+            if new_mark == "0.0":
                 return None
             if new_mark.isdecimal():
                 return float(new_mark)
