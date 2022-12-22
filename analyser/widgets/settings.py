@@ -138,23 +138,10 @@ class SettingsWidget(QtWidgets.QWidget):
 
         def ok(data: dict):
             self.update_check_thread.quit()
-
-            maj_cur, min_cur, pat_cur, _ = self.app.version
-            maj_rem, min_rem, pat_rem = data["latest_version"]
-
-            if maj_cur > maj_rem:
-                return self.on_update_unavailable()
-
-            if min_cur > min_rem:
-                return self.on_update_unavailable()
-
-            if pat_cur > pat_rem:
-                return self.on_update_unavailable()
-
-            if f'{maj_cur}.{min_cur}.{pat_cur}' == f'{maj_rem}.{min_rem}.{pat_rem}':
-                return self.on_update_unavailable()
-
-            self.on_update_available(data)
+            latest_version_code: int = data["latest_version_code"]
+            if latest_version_code > self.app.version_code:
+                return self.on_update_available(data)
+            self.on_update_unavailable()
 
         # Connect signals
         self.update_check_worker.error.connect(err) # type: ignore

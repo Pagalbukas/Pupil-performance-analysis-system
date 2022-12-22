@@ -26,7 +26,8 @@ from analyser.widgets.settings import SettingsWidget
 from analyser.widgets.type_selector import ManualFileSelectorWidget
 from analyser.widgets.view import GroupPupilSelectionWidget, GroupViewTypeSelectorWidget, PeriodicViewTypeSelectorWidget, ClassPupilSelectionWidget
 
-__VERSION__ = (1, 4, 0, 0)
+__VERSION__ = (1, 4, 1, 0)
+__VERSION_CODE__ = 1410
 __VERSION_NAME__ = f"{__VERSION__[0]}.{__VERSION__[1]}.{__VERSION__[2]}.{__VERSION__[3]}"
 REPO_URL = "https://mokytojams.svetikas.lt/"
 
@@ -65,6 +66,7 @@ class App(QtWidgets.QWidget): # type: ignore
     def __init__(self, settings: Settings):
         super().__init__()
         self.version = __VERSION__
+        self.version_code = __VERSION_CODE__
         logger.info("App instance initialised")
         if platform.system() == "Linux":
             logger.info(f'Running on Linux {platform.release()} [{platform.machine()}]')
