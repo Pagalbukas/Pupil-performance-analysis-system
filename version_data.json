@@ -1,5 +1,5 @@
 {
-    "latest_version": [1, 2, 1],
-    "url_win64": "https://github.com/Pagalbukas/Pupil-performance-analysis-system/releases/download/v1.2.1/Install-Analizatorius-Nuitka64.exe",
-    "url_win32": "https://github.com/Pagalbukas/Pupil-performance-analysis-system/releases/download/v1.2.1/Install-Analizatorius-Nuitka32.exe"
+    "latest_version": [1, 4, 0],
+    "url_win64": "https://github.com/Pagalbukas/Pupil-performance-analysis-system/releases/download/v1.4.0/Install-Analizatorius-Nuitka64.exe",
+    "url_win32": "https://github.com/Pagalbukas/Pupil-performance-analysis-system/releases/download/v1.4.0/Install-Analizatorius-Nuitka32.exe"
 }
