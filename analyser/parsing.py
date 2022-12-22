@@ -92,7 +92,11 @@ class BaseParser:
 
     def cell(self, col: int, row: int) -> Optional[Union[str, int, float]]:
         """Boilerplate function for returning value at the specified column and row of the cell."""
-        return self._sheet.get_cell(col, row)
+        val = self._sheet.get_cell(col, row)
+        # If value is 0.0, might as well cast it to 0
+        if val == 0.0:
+            return 0
+        return val
 
     def create_summary(self) -> Union[ClassSemesterReportSummary, ClassPeriodReportSummary, GroupReportSummary]:
         """Attempts to create a Summary object.

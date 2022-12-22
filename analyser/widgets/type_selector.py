@@ -4,6 +4,7 @@ import logging
 
 from typing import TYPE_CHECKING
 
+from analyser.errors import ParsingError
 from analyser.qt_compat import QtWidgets
 from analyser.parsing import parse_group_summary_file, parse_periodic_summary_files, parse_semester_summary_files
 
@@ -73,9 +74,11 @@ class ManualFileSelectorWidget(QtWidgets.QWidget):
             return
 
         # Generate summary objects from files
-        summary = parse_group_summary_file(file)
-        if summary is None:
-            return self.app.show_error_box("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
+        try:
+            summary = parse_group_summary_file(file)
+        except ParsingError as e:
+            # return self.app.show_error_box("Nerasta jokių tinkamų ataskaitų, kad būtų galima kurti grafiką!")
+            return self.app.show_error_box(str(e))
 
         # Open type selection
         self.app.open_group_type_selector(summary)

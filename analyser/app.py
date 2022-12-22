@@ -256,8 +256,8 @@ class App(QtWidgets.QWidget):
         return file_name
     
     def excepthook(self, exc_type, exc_value, exc_tb):
+        logger.critical(exc_value, exc_info=(exc_type, exc_value, exc_tb))
         tb = "".join(traceback.format_exception(exc_type, exc_value, exc_tb)).strip()
-        logger.critical(tb)
         self._show_error_box(
             "Įvyko nenumatyta klaida",
             f'{tb}\n\nPrograma savo darbo tęsti nebegali ir užsidarys.'

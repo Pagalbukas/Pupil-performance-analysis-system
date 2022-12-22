@@ -23,7 +23,10 @@ class UnifiedSheet:
 
         The arguments are flipped than the default implementations."""
         if self.xlrd:
-            return self._sheet.cell_value(row - 1, column - 1) or None
+            raw_value = self._sheet.cell_value(row - 1, column - 1)
+            if raw_value == "":
+                return None
+            return self._sheet.cell_value(row - 1, column - 1)
         return self._sheet.cell(row, column).value
 
 class SpreadsheetReader:
