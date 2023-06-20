@@ -3,6 +3,6 @@ pyside6==6.1.3
 openpyxl==3.0.6
 xlrd==2.0.1
 certifi==2022.12.07
-requests==2.25.1
+requests==2.31.0
 lxml==4.9.1
 typing_extensions==4.1.1
