@@ -3,13 +3,18 @@ __pycache__
 # Nuitka compilation files
 main.dist
 main.build
+
 # Pyinstaller build files
 dist
 build
+
 # The executable installer
 *.exe
+
 # NSIS installer script
 install-script.nsi
+
 # Ignore virtual environment
 python/
 venv/
+.venv/

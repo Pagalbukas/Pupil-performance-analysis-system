@@ -10,21 +10,22 @@ from logging.handlers import RotatingFileHandler
 from typing import List, Optional
 
 from analyser.files import EXECUTABLE_PATH, get_home_dir, get_log_file
-from analyser.graphing import (
-    AnyGraph, ClassAttendanceGraph, ClassAveragesGraph, GroupAveragesGraph
-)
 from analyser.mano_dienynas.client import Client # type: ignore
 from analyser.settings import Settings
 from analyser.summaries import ClassPeriodReportSummary, GroupReportSummary
-from analyser.qt_compat import QtWidgets, QtGui
-from analyser.widgets.graph import MatplotlibWindow
-from analyser.widgets.main import MainWidget
-from analyser.widgets.login import LoginWidget
-from analyser.widgets.role import SelectUserRoleWidget
-from analyser.widgets.selectors import ClassGeneratorWidget, GroupGeneratorWidget
-from analyser.widgets.settings import SettingsWidget
-from analyser.widgets.type_selector import ManualFileSelectorWidget
-from analyser.widgets.view import GroupPupilSelectionWidget, GroupViewTypeSelectorWidget, PeriodicViewTypeSelectorWidget, ClassPupilSelectionWidget
+
+from analyser.ui.graphing import (
+    AnyGraph, ClassAttendanceGraph, ClassAveragesGraph, GroupAveragesGraph
+)
+from analyser.ui.widgets.graph import MatplotlibWindow
+from analyser.ui.widgets.main import MainWidget
+from analyser.ui.widgets.login import LoginWidget
+from analyser.ui.widgets.role import SelectUserRoleWidget
+from analyser.ui.widgets.selectors import ClassGeneratorWidget, GroupGeneratorWidget
+from analyser.ui.widgets.settings import SettingsWidget
+from analyser.ui.widgets.type_selector import ManualFileSelectorWidget
+from analyser.ui.widgets.view import GroupPupilSelectionWidget, GroupViewTypeSelectorWidget, PeriodicViewTypeSelectorWidget, ClassPupilSelectionWidget
+from analyser.ui.qt_compat import QtWidgets, QtGui
 
 __VERSION__ = (1, 4, 1, 0)
 __VERSION_CODE__ = 1410
@@ -134,8 +135,6 @@ class App(QtWidgets.QWidget): # type: ignore
         self.initUI()
 
     def set_window_title(self, section: str):
-        if section is None:
-            return self.setWindowTitle(f'Mokinių pasiekimų ir lankomumo stebėsenos sistema')
         self.setWindowTitle(f'Mokinių pasiekimų ir lankomumo stebėsenos sistema | {section}')
 
     def _display_graph(self, graph: AnyGraph):

@@ -4,6 +4,7 @@ import datetime
 import logging
 
 from typing import List, Optional, Union
+from typing_extensions import override
 
 from analyser.files import get_ignored_item_filters
 
@@ -81,6 +82,7 @@ class Mark:
         self.raw_value = raw_value
         self.date = date
 
+    @override
     def __repr__(self) -> str:
         return f'<Mark raw="{self.raw_value}">'
 
@@ -150,6 +152,7 @@ class UnifiedSubject:
         self.mark = mark
         self.is_module = "modulis" in self.name
 
+    @override
     def __repr__(self) -> str:
         return f'<UnifiedSubject name="{self.name}" mark={self.mark}>'
 
@@ -219,6 +222,7 @@ class ClassPupil:
         self.average = average
         self.attendance = attendance
 
+    @override
     def __repr__(self) -> str:
         return f'<ClassPupil name="{self.name}" average={self.average} subjects={len(self.subjects)}>'
 
@@ -241,6 +245,7 @@ class GroupPupil:
         self.average = average
         self.attendance = attendance
 
+    @override
     def __repr__(self) -> str:
         return f'<GroupPupil name="{self.name}" average={self.average} marks={len(self.marks)}>'
 

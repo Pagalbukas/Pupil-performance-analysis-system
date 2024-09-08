@@ -5,13 +5,13 @@ import logging
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from analyser.mano_dienynas.client import Group, Class # type: ignore
-from analyser.parsing import parse_group_summary_file, parse_periodic_summary_files
-from analyser.qt_compat import QtWidgets, QtCore, Qt
+from analyser.mano_dienynas.parsing import parse_group_summary_file, parse_periodic_summary_files
+from analyser.ui.qt_compat import QtWidgets, QtCore, Qt
 
 logger = logging.getLogger("analizatorius")
 
 if TYPE_CHECKING:
-    from analyser.app import App
+    from analyser.ui.app import App
 
 class GenerateReportWorker(QtCore.QObject):
     success = QtCore.Signal(list)

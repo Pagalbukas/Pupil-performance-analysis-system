@@ -9,11 +9,11 @@ import logging
 from typing import TYPE_CHECKING
 
 from analyser.files import get_data_dir, open_path
-from analyser.qt_compat import QtWidgets, QtCore, Qt
+from analyser.ui.qt_compat import QtWidgets, QtCore, Qt
 from analyser.settings import Settings
 
 if TYPE_CHECKING:
-    from analyser.app import App
+    from analyser.ui.app import App
 
 logger = logging.getLogger("analizatorius")
 
@@ -197,8 +197,8 @@ class SettingsWidget(QtWidgets.QWidget):
 
     def reset_state(self) -> None:
         self.unsaved = False
-        self.app.settings = Settings(auto_load=False)
-        self.app.settings._load_params({})
+        # Create new settings instance and save it
+        self.app.settings = Settings()
         self.app.settings.save()
         self._before_exit()
         self.app.go_to_back()

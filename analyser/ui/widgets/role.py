@@ -4,7 +4,7 @@ import logging
 
 from typing import TYPE_CHECKING, Optional
 
-from analyser.qt_compat import QtWidgets, QtCore
+from analyser.ui.qt_compat import QtWidgets, QtCore
 
 logger = logging.getLogger("analizatorius")
 

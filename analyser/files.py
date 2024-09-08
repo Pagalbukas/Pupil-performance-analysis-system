@@ -46,7 +46,7 @@ def get_log_file() -> str:
 def copy_config_to_data() -> None:
 
     # Force creation of the data directory
-    get_data_dir()
+    _ = get_data_dir()
 
     if not os.path.exists(IGNORED_ITEMS_SOURCE_PATH):
         return
@@ -59,7 +59,7 @@ def get_ignored_item_filters() -> List[Tuple[int, str]]:
     if not os.path.exists(IGNORED_ITEMS_TARGET_PATH):
         return []
 
-    filters = []
+    filters: List[Tuple[int, str]] = []
     with open(IGNORED_ITEMS_TARGET_PATH, "r", encoding="utf-8") as f:
         while line := f.readline():
             string = line.rstrip()
@@ -82,7 +82,7 @@ def open_path(path: str) -> None:
     """Opens the path in a file browser."""
     if sys.platform == "win32":
         return os.startfile(path)
-    subprocess.check_call(
+    _ = subprocess.check_call(
         ['xdg-open', path],
         stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT
     )

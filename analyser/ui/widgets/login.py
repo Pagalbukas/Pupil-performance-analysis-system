@@ -4,12 +4,12 @@ import logging
 
 from typing import TYPE_CHECKING
 
-from analyser.qt_compat import QtWidgets, QtCore, QtGui, Qt
+from analyser.ui.qt_compat import QtWidgets, QtCore, QtGui, Qt
 
 logger = logging.getLogger("analizatorius")
 
 if TYPE_CHECKING:
-    from analyser.app import App
+    from analyser.ui.app import App
 
 class LoginTaskWorker(QtCore.QObject): # type: ignore
     success = QtCore.Signal()

@@ -5,4 +5,5 @@ xlrd==2.0.1
 certifi==2023.7.22
 requests==2.31.0
 lxml==4.9.1
+lxml-stubs==0.5.1
 typing_extensions==4.1.1

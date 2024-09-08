@@ -29,8 +29,8 @@ from matplotlib.legend_handler import HandlerLine2D  # type: ignore # noqa: E402
 from matplotlib.lines import Line2D  # type: ignore # noqa: E402
 from matplotlib.text import Annotation  # type: ignore # noqa: E402
 
-from analyser.graphing import BaseGraph
-from analyser.qt_compat import Qt, QtWidgets
+from analyser.ui.graphing import BaseGraph
+from analyser.ui.qt_compat import Qt, QtWidgets
 
 MONTH_NAMES = {
     1: "Sausis",

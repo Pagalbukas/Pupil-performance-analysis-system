@@ -5,13 +5,13 @@ import logging
 from typing import TYPE_CHECKING
 
 from analyser.errors import ParsingError
-from analyser.qt_compat import QtWidgets
-from analyser.parsing import parse_group_summary_file, parse_periodic_summary_files, parse_semester_summary_files
+from analyser.ui.qt_compat import QtWidgets
+from analyser.mano_dienynas.parsing import parse_group_summary_file, parse_periodic_summary_files, parse_semester_summary_files
 
 logger = logging.getLogger("analizatorius")
 
 if TYPE_CHECKING:
-    from analyser.app import App
+    from analyser.ui.app import App
 
 class ManualFileSelectorWidget(QtWidgets.QWidget): # type: ignore
 

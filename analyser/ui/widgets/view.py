@@ -4,16 +4,16 @@ import logging
 
 from typing import TYPE_CHECKING, List, Optional
 
-from analyser.graphing import (
+from analyser.summaries import ClassPeriodReportSummary, GroupReportSummary, anonymize_pupil_names
+from analyser.ui.graphing import (
     ClassPupilAttendanceGraph, ClassPupilAveragesGraph, ClassPupilSubjectGraph
 )
-from analyser.summaries import ClassPeriodReportSummary, GroupReportSummary, anonymize_pupil_names
-from analyser.qt_compat import QtWidgets
+from analyser.ui.qt_compat import QtWidgets
 
 logger = logging.getLogger("analizatorius")
 
 if TYPE_CHECKING:
-    from analyser.app import App
+    from analyser.ui.app import App
 
 class PeriodicViewTypeSelectorWidget(QtWidgets.QWidget): # type: ignore
 
